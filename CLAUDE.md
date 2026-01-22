@@ -4,10 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Python project with PostgreSQL database connectivity. It uses modern tooling with `pyproject.toml` for configuration and follows a standard Python package structure with source code in `src/` and tests in `tests/`.
+This is a Python project with PostgreSQL database connectivity and ChromaDB vector database integration. It uses modern tooling with `pyproject.toml` for configuration and follows a standard Python package structure with source code in `src/` and tests in `tests/`.
 
 The project includes:
 - PostgreSQL database connection management with connection pooling
+- ChromaDB vector database for embeddings and semantic search
 - Environment-based configuration using `.env` files
 - Example usage scripts and comprehensive tests
 
@@ -59,8 +60,11 @@ mypy src
 
 ### Running Examples
 ```bash
-# Run example database usage script
+# Run example PostgreSQL database usage script
 python example_usage.py
+
+# Run example ChromaDB vector database usage script
+python example_vectordb_usage.py
 ```
 
 ## Architecture
@@ -68,9 +72,12 @@ python example_usage.py
 ### Project Structure
 - `src/`: Main package source code
   - `database.py`: PostgreSQL connection management with connection pooling
+  - `vectordb.py`: ChromaDB vector database management
 - `tests/`: Test suite (mirrors src/ structure)
   - `test_database.py`: Database module tests (uses mocks, no real DB required)
-- `example_usage.py`: Demonstrates database operations
+  - `test_vectordb.py`: Vector database module tests (uses mocks, no real ChromaDB required)
+- `example_usage.py`: Demonstrates PostgreSQL database operations
+- `example_vectordb_usage.py`: Demonstrates ChromaDB vector database operations
 - `pyproject.toml`: Project configuration, dependencies, and tool settings
 - `.env`: Database credentials (not tracked in git)
 - `.env.example`: Template for database configuration
@@ -81,6 +88,7 @@ python example_usage.py
 - **mypy**: Static type checker (configured for Python 3.9+)
 - **pytest**: Test framework with coverage reporting enabled by default
 - **psycopg2-binary**: PostgreSQL database adapter
+- **chromadb**: Vector database for embeddings and semantic search
 - **python-dotenv**: Environment variable management
 
 ### Python Version
@@ -127,6 +135,57 @@ finally:
     db.close()
 ```
 
+## Vector Database Architecture
+
+### VectorDatabase Class (`src/vectordb.py`)
+The `VectorDatabase` class provides a high-level interface for ChromaDB vector database operations:
+
+- **Persistent Storage**: Uses local persistent storage by default (configurable via CHROMA_PERSIST_DIR)
+- **Remote Server**: Can connect to remote ChromaDB servers (configurable via CHROMA_HOST and CHROMA_PORT)
+- **Context Managers**: Supports `with` statements for clean resource management
+- **Environment Configuration**: Reads configuration from environment variables
+- **Helper Methods**:
+  - `get_or_create_collection()`: Get or create a collection with optional metadata
+  - `get_collection()`: Get an existing collection
+  - `delete_collection()`: Delete a collection
+  - `list_collections()`: List all collections
+  - `add_documents()`: Add documents with optional metadata and IDs
+  - `query_documents()`: Perform semantic search queries with optional filters
+  - `get_documents()`: Retrieve documents by ID or metadata filter
+  - `update_documents()`: Update document content and metadata
+  - `delete_documents()`: Delete documents by ID or metadata filter
+  - `count_documents()`: Count documents in a collection
+  - `reset()`: Clear all collections
+
+### Usage Pattern
+```python
+from src.vectordb import VectorDatabase
+
+# Option 1: Using context manager with persistent storage (recommended)
+with VectorDatabase() as vdb:
+    # Add documents
+    vdb.add_documents(
+        "my_collection",
+        documents=["Document 1", "Document 2"],
+        metadatas=[{"source": "web"}, {"source": "api"}],
+        ids=["doc1", "doc2"]
+    )
+
+    # Semantic search
+    results = vdb.query_documents(
+        "my_collection",
+        query_texts=["search query"],
+        n_results=5
+    )
+
+    # Get specific documents
+    docs = vdb.get_documents("my_collection", ids=["doc1"])
+
+# Option 2: Connect to remote ChromaDB server
+with VectorDatabase(use_persistent=False, host="remote.host", port=8000) as vdb:
+    results = vdb.query_documents("my_collection", ["query"])
+```
+
 ## Notes
 
 - The project is installed in editable mode (`-e`), so code changes are immediately reflected without reinstalling
@@ -134,4 +193,7 @@ finally:
 - All tool configurations (black, ruff, mypy, pytest) are centralized in `pyproject.toml`
 - Database credentials should never be committed to git (`.env` is in `.gitignore`)
 - Database tests use mocks and don't require a real PostgreSQL instance
-- The connection pool defaults to 1-10 connections but can be customized
+- The PostgreSQL connection pool defaults to 1-10 connections but can be customized
+- ChromaDB uses persistent local storage by default (stored in `./chroma_db` directory)
+- Vector database tests use mocks and don't require a real ChromaDB instance
+- ChromaDB automatically generates embeddings using its default embedding function (can be customized)
