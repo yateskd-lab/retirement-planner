@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test</title>
+</head>
+<body>
+    <h1>If you can see this, the server is working</h1>
+    <p>Try these steps:</p>
+    <ol>
+        <li><a href="/reset.html">Go to reset page</a> and clear data</li>
+        <li><a href="/">Go back to main app</a></li>
+    </ol>
+
+    <h2>Check Console</h2>
+    <p>Open browser console (F12 or right-click > Inspect > Console) and check for errors</p>
+
+    <script>
+        console.log('Test page loaded successfully');
+        console.log('Checking localStorage...');
+        console.log('localStorage keys:', Object.keys(localStorage));
+        Object.keys(localStorage).forEach(key => {
+            console.log(key + ':', localStorage.getItem(key));
+        });
+    </script>
+</body>
+</html>

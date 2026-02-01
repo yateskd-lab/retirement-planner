@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Storage</title>
+</head>
+<body>
+    <h1>Clear Retirement Planner Storage</h1>
+    <button onclick="clearStorage()">Clear All Data</button>
+    <p id="result"></p>
+    <script>
+        function clearStorage() {
+            localStorage.clear();
+            document.getElementById('result').textContent = 'Storage cleared! Now refresh the main app.';
+        }
+    </script>
+</body>
+</html>

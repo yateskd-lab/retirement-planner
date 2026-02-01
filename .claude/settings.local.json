@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm install)",
+      "Bash(npm run build:*)",
+      "Bash(open http://localhost:3000/)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
