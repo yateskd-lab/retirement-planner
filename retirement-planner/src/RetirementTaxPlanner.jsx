@@ -66,7 +66,7 @@ export default function RetirementTaxPlanner() {
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [debugLog, setDebugLog] = useState([]);
 
-  const [apiKey, setApiKey] = useState('F0MZC5FVJX1Q27HD');
+  const [apiKey, setApiKey] = useState('');
 
   // Add debug message helper
   const addDebugLog = (message) => {
@@ -1188,8 +1188,8 @@ export default function RetirementTaxPlanner() {
           Tip: Use ticker symbols (e.g., AAPL, MSFT, GOOGL) as stock names to automatically fetch current prices.
         </p>
 
-        {/* API KEY INPUT - HIDDEN */}
-        {/* <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+        {/* API KEY INPUT */}
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
           <p className="text-xs text-gray-700 mb-2">
             <strong>Tip:</strong> Use ticker symbols (e.g., AAPL, MSFT, GOOGL) as stock names to automatically fetch current prices.
           </p>
@@ -1205,7 +1205,7 @@ export default function RetirementTaxPlanner() {
               className="flex-1 px-3 py-1 border border-gray-300 rounded text-sm"
             />
           </div>
-        </div> */}
+        </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
