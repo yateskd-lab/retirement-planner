@@ -1,6 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calculator, DollarSign, TrendingDown, AlertCircle, Save, Download, Upload, RotateCcw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Cell, ResponsiveContainer, ReferenceLine, ReferenceArea, Label } from 'recharts';
+import {
+  TAX_BRACKETS_2026_SINGLE,
+  TAX_BRACKETS_2026_MFJ,
+  STANDARD_DEDUCTION_2026,
+  IRMAA_2026_SINGLE,
+  IRMAA_2026_MFJ,
+  UTAH_TAX_RATE_2026,
+  calculateFederalTax,
+  getTaxBracket,
+  getRoomInBracket,
+  calculateMAGI,
+  getIRMAABracket,
+  getRoomToNextIRMAABracket,
+  getRoomToLowerIRMAABracket,
+  fetchStockPrice as fetchStockPriceUtil
+} from 'retirement-shared';
 
 export default function RetirementTaxPlanner() {
   // Load saved data from storage on mount
@@ -121,77 +137,9 @@ export default function RetirementTaxPlanner() {
     ));
   };
 
-  // Fetch current stock price using multiple fallback APIs
+  // Fetch current stock price using shared utility (wrapper to pass logging)
   const fetchStockPrice = async (ticker) => {
-    try {
-      // Try method 1: Yahoo Finance (most reliable, no API key needed)
-      try {
-        const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
-        addDebugLog(`    → Trying Yahoo Finance for ${ticker}`);
-        const yahooResponse = await fetch(yahooUrl);
-        addDebugLog(`    → Yahoo response status: ${yahooResponse.status}`);
-        const yahooData = await yahooResponse.json();
-        addDebugLog(`    → Yahoo data received: ${JSON.stringify(yahooData).substring(0, 100)}...`);
-
-        if (yahooData?.chart?.result?.[0]?.meta?.regularMarketPrice) {
-          const price = parseFloat(yahooData.chart.result[0].meta.regularMarketPrice);
-          addDebugLog(`    ✓ Yahoo Success for ${ticker}: $${price}`);
-          return price;
-        } else {
-          addDebugLog(`    ✗ Yahoo data structure invalid for ${ticker}`);
-        }
-      } catch (e) {
-        addDebugLog(`    ✗ Yahoo Finance failed for ${ticker}: ${e.message}`);
-      }
-
-      // Try method 2: Twelve Data (backup)
-      try {
-        const twelveUrl = `https://api.twelvedata.com/price?symbol=${ticker}&apikey=demo`;
-        addDebugLog(`    → Trying Twelve Data for ${ticker}`);
-        const twelveResponse = await fetch(twelveUrl);
-        addDebugLog(`    → Twelve Data response status: ${twelveResponse.status}`);
-        const twelveData = await twelveResponse.json();
-        addDebugLog(`    → Twelve Data returned: ${JSON.stringify(twelveData)}`);
-
-        if (twelveData?.price) {
-          const price = parseFloat(twelveData.price);
-          addDebugLog(`    ✓ Twelve Data Success for ${ticker}: $${price}`);
-          return price;
-        } else {
-          addDebugLog(`    ✗ Twelve Data has no price field for ${ticker}`);
-        }
-      } catch (e) {
-        addDebugLog(`    ✗ Twelve Data failed for ${ticker}: ${e.message}`);
-      }
-
-      // Try method 3: Alpha Vantage (if user provided API key)
-      if (apiKey && apiKey.length > 0) {
-        try {
-          const avUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${apiKey}`;
-          addDebugLog(`    → Trying Alpha Vantage for ${ticker} with your API key`);
-          const avResponse = await fetch(avUrl);
-          addDebugLog(`    → Alpha Vantage response status: ${avResponse.status}`);
-          const avData = await avResponse.json();
-          addDebugLog(`    → Alpha Vantage returned: ${JSON.stringify(avData).substring(0, 200)}...`);
-
-          if (avData && avData['Global Quote'] && avData['Global Quote']['05. price']) {
-            const price = parseFloat(avData['Global Quote']['05. price']);
-            addDebugLog(`    ✓ Alpha Vantage Success for ${ticker}: $${price}`);
-            return price;
-          } else {
-            addDebugLog(`    ✗ Alpha Vantage has no valid price for ${ticker}`);
-          }
-        } catch (e) {
-          addDebugLog(`    ✗ Alpha Vantage failed for ${ticker}: ${e.message}`);
-        }
-      }
-
-      addDebugLog(`    ✗ All methods failed for ${ticker}`);
-      return null;
-    } catch (error) {
-      addDebugLog(`    ✗ Error fetching price for ${ticker}: ${error.message}`);
-      return null;
-    }
+    return await fetchStockPriceUtil(ticker, apiKey, addDebugLog);
   };
 
   // Update all stock prices
@@ -368,6 +316,35 @@ export default function RetirementTaxPlanner() {
     URL.revokeObjectURL(url);
   };
 
+  // Export annual income totals for multi-year planner
+  const exportToMultiYear = () => {
+    if (!results) return;
+
+    const data = {
+      version: '1.0',
+      exportType: 'single-year-to-multi-year',
+      exportedAt: new Date().toISOString(),
+      annualIncome: {
+        interestIncome: personalInfo.interestIncome || 0,
+        qualifiedDividends: personalInfo.qualifiedDividends || 0,
+        ordinaryDividends: personalInfo.ordinaryDividends || 0,
+        longTermCapitalGains: results.totalCapitalGains - (personalInfo.qualifiedDividends || 0), // Subtract qualified divs already counted
+        shortTermCapitalGains: 0 // Single-year assumes all capital gains are long-term
+      },
+      note: 'Import this file into the Multi-Year Retirement Planner to use these annual income values across all years.'
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `multi-year-income-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Import data from JSON file
   const importData = (event) => {
     const file = event.target.files[0];
@@ -497,70 +474,7 @@ export default function RetirementTaxPlanner() {
     );
   }
 
-  // 2026 tax brackets (single filer)
-  const taxBrackets2026Single = [
-    { rate: 0.10, min: 0, max: 12400 },
-    { rate: 0.12, min: 12400, max: 50400 },
-    { rate: 0.22, min: 50400, max: 105700 },
-    { rate: 0.24, min: 105700, max: 201800 },
-    { rate: 0.32, min: 201800, max: 256350 },
-    { rate: 0.35, min: 256350, max: 640600 },
-    { rate: 0.37, min: 640600, max: Infinity }
-  ];
-
-  // 2026 tax brackets (married filing jointly)
-  const taxBrackets2026MFJ = [
-    { rate: 0.10, min: 0, max: 24800 },
-    { rate: 0.12, min: 24800, max: 100800 },
-    { rate: 0.22, min: 100800, max: 211400 },
-    { rate: 0.24, min: 211400, max: 403600 },
-    { rate: 0.32, min: 403600, max: 512700 },
-    { rate: 0.35, min: 512700, max: 768600 },
-    { rate: 0.37, min: 768600, max: Infinity }
-  ];
-
-  // 2026 IRMAA brackets (based on 2024 MAGI for 2026 premiums)
-  const irmaa2026Single = [
-    { magi: 0, magiMax: 109000, partB: 0, partD: 0, description: 'No IRMAA' },
-    { magi: 109000, magiMax: 137000, partB: 81.20, partD: 14.50, description: 'Bracket 1' },
-    { magi: 137000, magiMax: 171000, partB: 202.90, partD: 37.60, description: 'Bracket 2' },
-    { magi: 171000, magiMax: 205000, partB: 324.70, partD: 60.60, description: 'Bracket 3' },
-    { magi: 205000, magiMax: 500000, partB: 446.40, partD: 83.70, description: 'Bracket 4' },
-    { magi: 500000, magiMax: Infinity, partB: 487.00, partD: 91.00, description: 'Bracket 5 (Top)' }
-  ];
-
-  const irmaa2026MFJ = [
-    { magi: 0, magiMax: 218000, partB: 0, partD: 0, description: 'No IRMAA' },
-    { magi: 218000, magiMax: 274000, partB: 81.20, partD: 14.50, description: 'Bracket 1' },
-    { magi: 274000, magiMax: 342000, partB: 202.90, partD: 37.60, description: 'Bracket 2' },
-    { magi: 342000, magiMax: 410000, partB: 324.70, partD: 60.60, description: 'Bracket 3' },
-    { magi: 410000, magiMax: 750000, partB: 446.40, partD: 83.70, description: 'Bracket 4' },
-    { magi: 750000, magiMax: Infinity, partB: 487.00, partD: 91.00, description: 'Bracket 5 (Top)' }
-  ];
-
-  const standardDeduction2026 = {
-    single: 16100,
-    married: 32200,
-    hoh: 24250
-  };
-
-  // Utah state tax rate for 2026
-  const utahTaxRate2026 = 0.0455; // 4.55% flat rate
-
-  const calculateTax = (taxableIncome, filingStatus) => {
-    const brackets = filingStatus === 'single' ? taxBrackets2026Single : taxBrackets2026MFJ;
-    let tax = 0;
-    
-    for (let i = 0; i < brackets.length; i++) {
-      const bracket = brackets[i];
-      if (taxableIncome > bracket.min) {
-        const taxableInBracket = Math.min(taxableIncome, bracket.max) - bracket.min;
-        tax += taxableInBracket * bracket.rate;
-      }
-    }
-    
-    return tax;
-  };
+  // Tax brackets, IRMAA brackets, and calculations now imported from retirement-shared
 
   const calculateScenario = (scenario) => {
     // Destructure withdrawal data from the scenario
@@ -630,7 +544,7 @@ export default function RetirementTaxPlanner() {
     const taxFreeWithdrawals = withdrawals.rothIRA + withdrawals.roth401k + withdrawals.savings;
     
     // Adjust for standard deduction
-    const deduction = personalInfo.filingStatus === 'single' ? standardDeduction2026.single : standardDeduction2026.married;
+    const deduction = personalInfo.filingStatus === 'single' ? STANDARD_DEDUCTION_2026.single : STANDARD_DEDUCTION_2026.married;
     const taxableOrdinaryIncome = Math.max(0, ordinaryIncome - deduction);
     
     // Calculate capital gains (includes qualified dividends, taxed at preferential rates)
@@ -642,59 +556,25 @@ export default function RetirementTaxPlanner() {
     const capitalGainsTax = totalCapitalGains > 0 ? totalCapitalGains * 0.15 : 0;
     
     // Calculate ordinary income tax
-    const ordinaryIncomeTax = calculateTax(taxableOrdinaryIncome, personalInfo.filingStatus);
-    
+    const ordinaryIncomeTax = calculateFederalTax(taxableOrdinaryIncome, personalInfo.filingStatus);
+
     // Calculate Utah state tax (flat rate on federal taxable income)
-    const utahStateTax = taxableOrdinaryIncome * utahTaxRate2026;
-    const utahCapitalGainsTax = totalCapitalGains > 0 ? totalCapitalGains * utahTaxRate2026 : 0;
+    const utahStateTax = taxableOrdinaryIncome * UTAH_TAX_RATE_2026;
+    const utahCapitalGainsTax = totalCapitalGains > 0 ? totalCapitalGains * UTAH_TAX_RATE_2026 : 0;
     const totalUtahTax = utahStateTax + utahCapitalGainsTax;
     
     // Calculate MAGI for IRMAA (AGI + tax-exempt interest)
     // For simplification, using taxable ordinary income + deduction as proxy for AGI
     const magi = ordinaryIncome; // MAGI includes all ordinary income before deduction
     
-    // Determine IRMAA bracket
-    const irmaaBrackets = personalInfo.filingStatus === 'single' ? irmaa2026Single : irmaa2026MFJ;
-    let currentIRMAABracket = null;
-    let roomToNextIRMAABracket = 0;
-    let roomToLowerIRMAABracket = 0;
-    
-    for (let i = 0; i < irmaaBrackets.length; i++) {
-      const bracket = irmaaBrackets[i];
-      if (magi >= bracket.magi && magi < bracket.magiMax) {
-        currentIRMAABracket = bracket;
-        roomToNextIRMAABracket = bracket.magiMax - magi;
-        
-        // Calculate room to move to lower bracket
-        if (i > 0) {
-          roomToLowerIRMAABracket = magi - irmaaBrackets[i-1].magiMax;
-        }
-        break;
-      } else if (magi >= bracket.magiMax && i === irmaaBrackets.length - 1) {
-        currentIRMAABracket = bracket;
-        roomToNextIRMAABracket = 0; // In highest bracket
-        roomToLowerIRMAABracket = magi - bracket.magi;
-        break;
-      }
-    }
-    
-    // Determine current tax bracket and room to top
-    const brackets = personalInfo.filingStatus === 'single' ? taxBrackets2026Single : taxBrackets2026MFJ;
-    let currentBracket = null;
-    let roomInBracket = 0;
-    
-    for (let i = 0; i < brackets.length; i++) {
-      const bracket = brackets[i];
-      if (taxableOrdinaryIncome >= bracket.min && taxableOrdinaryIncome < bracket.max) {
-        currentBracket = bracket;
-        roomInBracket = bracket.max - taxableOrdinaryIncome;
-        break;
-      } else if (taxableOrdinaryIncome >= bracket.max && i === brackets.length - 1) {
-        currentBracket = bracket;
-        roomInBracket = 0; // In highest bracket
-        break;
-      }
-    }
+    // Determine IRMAA bracket (using imported functions)
+    const currentIRMAABracket = getIRMAABracket(magi, personalInfo.filingStatus);
+    const roomToNextIRMAABracket = getRoomToNextIRMAABracket(magi, personalInfo.filingStatus);
+    const roomToLowerIRMAABracket = getRoomToLowerIRMAABracket(magi, personalInfo.filingStatus);
+
+    // Determine current tax bracket and room to top (using imported functions)
+    const currentBracket = getTaxBracket(taxableOrdinaryIncome, personalInfo.filingStatus);
+    const roomInBracket = getRoomInBracket(taxableOrdinaryIncome, personalInfo.filingStatus);
     
     // Total tax
     const totalTax = ordinaryIncomeTax + capitalGainsTax;
@@ -923,6 +803,14 @@ export default function RetirementTaxPlanner() {
               <Download className="w-4 h-4" />
               Export
             </button>
+            <button
+              onClick={exportToMultiYear}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              title="Export income totals for Multi-Year Planner"
+            >
+              <Download className="w-4 h-4" />
+              Export to Multi-Year
+            </button>
             <label className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 cursor-pointer">
               <Upload className="w-4 h-4" />
               Import
@@ -1025,7 +913,27 @@ export default function RetirementTaxPlanner() {
                 <option value="married">Married Filing Jointly</option>
               </select>
             </div>
-            
+
+            {personalInfo.filingStatus === 'married' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-medium text-gray-700 mb-3">Spouse Information</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Spouse Age</label>
+                    <input
+                      type="number"
+                      value={personalInfo.spouseAge || ''}
+                      onChange={(e) => setPersonalInfo({...personalInfo, spouseAge: parseInt(e.target.value) || 0})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      min="0"
+                      max="120"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">For Medicare and RMD calculations</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Months Working This Year</label>
               <input
@@ -1831,7 +1739,7 @@ export default function RetirementTaxPlanner() {
                 </tr>
               </thead>
               <tbody>
-                {(personalInfo.filingStatus === 'single' ? irmaa2026Single : irmaa2026MFJ).map((bracket, idx) => {
+                {(personalInfo.filingStatus === 'single' ? IRMAA_2026_SINGLE : IRMAA_2026_MFJ).map((bracket, idx) => {
                   const isCurrentBracket = results.currentIRMAABracket &&
                     bracket.magi === results.currentIRMAABracket.magi;
                   const totalMonthly = bracket.partB + bracket.partD;
@@ -1891,8 +1799,8 @@ export default function RetirementTaxPlanner() {
               <h4 className="text-sm font-semibold text-gray-700">Ordinary Income Tax Brackets (2026)</h4>
               <span className="text-xs text-gray-500">Your income: ${results.taxableOrdinaryIncome.toLocaleString()}</span>
             </div>
-            {(personalInfo.filingStatus === 'single' ? taxBrackets2026Single : taxBrackets2026MFJ).map((bracket, index) => {
-              const brackets = personalInfo.filingStatus === 'single' ? taxBrackets2026Single : taxBrackets2026MFJ;
+            {(personalInfo.filingStatus === 'single' ? TAX_BRACKETS_2026_SINGLE : TAX_BRACKETS_2026_MFJ).map((bracket, index) => {
+              const brackets = personalInfo.filingStatus === 'single' ? TAX_BRACKETS_2026_SINGLE : TAX_BRACKETS_2026_MFJ;
               const bracketWidth = bracket.max === Infinity ? 100000 : (bracket.max - bracket.min);
               const maxWidth = brackets[brackets.length - 2].max; // Use second to last bracket for scaling
               const widthPercent = Math.min((bracketWidth / maxWidth) * 100, 100);
@@ -2121,7 +2029,7 @@ export default function RetirementTaxPlanner() {
           const totalIncome = taxableOrdinaryIncome + totalCapitalGains;
 
           // Get tax brackets
-          const ordinaryBrackets = personalInfo.filingStatus === 'single' ? taxBrackets2026Single : taxBrackets2026MFJ;
+          const ordinaryBrackets = personalInfo.filingStatus === 'single' ? TAX_BRACKETS_2026_SINGLE : TAX_BRACKETS_2026_MFJ;
           const capitalGainsBrackets = personalInfo.filingStatus === 'single'
             ? [{ max: 50400 }, { max: 561350 }]
             : [{ max: 100800 }, { max: 751600 }];
