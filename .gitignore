@@ -66,3 +66,16 @@ build/
 
 # ChromaDB
 chroma_db/
+.aider*
+*.sav*
+*.old
+*.oldcss
+*.oldconfig.js
+retirement-planner/npm_run_dev.txt
+retirement-planner/Screenshot*.png
+retirement-planner/*.py
+genealogy-desktop/
+retirement_analysis.py
+retirement_cashflow_plan.png
+.claude/settings.local.json
+retirement-plan-*.json
