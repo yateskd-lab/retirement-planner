@@ -1082,9 +1082,9 @@ export default function RetirementTaxPlanner() {
         return;
       }
 
-      if (lots.length > 20) {
-        alert(`CSV contains ${lots.length} lots, but maximum is 20. Only first 20 will be imported.`);
-        lots.splice(20);
+      if (lots.length > 30) {
+        alert(`CSV contains ${lots.length} lots, but maximum is 30. Only first 30 will be imported.`);
+        lots.splice(30);
       }
 
       // Import lots into the selected asset
