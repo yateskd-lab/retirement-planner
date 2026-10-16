@@ -6,7 +6,7 @@ export default function TaxSummary({ ordinaryBracketsFor, personalInfo, results 
   return (
     <>
       {/* Tax Summary */}
-      <div className="bg-white rounded-lg shadow p-6 pdf-section">
+      <div className="bg-white rounded-lg shadow p-6 mb-6 pdf-section">
         <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
           <TrendingDown className="w-5 h-5 text-blue-600" />
           Federal Tax Analysis
