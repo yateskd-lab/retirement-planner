@@ -39,7 +39,7 @@ export default function LotManagementModal({ addLot, calculateLotMetrics, closeL
               <div className="p-6 overflow-y-auto flex-1">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-700">
-                    Lots ({assetLots.length}/20)
+                    Lots ({assetLots.length}/30)
                   </h3>
                   <div className="flex gap-2">
                     <button
