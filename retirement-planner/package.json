@@ -9,19 +9,29 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@babel/runtime": "^7.29.7",
+    "canvg": "^3.0.11",
+    "core-js": "^3.49.0",
+    "dompurify": "^2.5.9",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.1",
     "lucide-react": "^0.263.1",
+    "raf": "^3.4.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "recharts": "^3.7.0",
-    "retirement-shared": "*"
+    "rgbcolor": "^1.0.1",
+    "stackblur-canvas": "^2.7.0",
+    "svg-pathdata": "^6.0.3"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
-    "@vitejs/plugin-react": "^4.0.3",
+    "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.27",
-    "tailwindcss": "^3.3.3",
-    "vite": "^4.4.5"
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.1"
   }
 }

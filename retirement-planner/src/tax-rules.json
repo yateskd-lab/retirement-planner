@@ -1,0 +1,252 @@
+{
+  "_howToUpdate": [
+    "To add a new tax year: copy the newest block under \"years\", rename its key to the new year, and update the numbers.",
+    "Then set \"activeYear\" to the new year. No code changes are needed.",
+    "In any bracket list, \"max\": null means no upper limit (the top bracket).",
+    "Brackets must be contiguous: each bracket's min must equal the previous bracket's max. The planner checks this on load and reports the exact field if something is off.",
+    "Filing-status keys: \"single\" and \"married\" (married filing jointly) are required. Any status without its own entry falls back to \"married\".",
+    "Medicare premiums and IRMAA tables are NOT in the tax-year blocks: see the top-level \"medicare\" section, which is keyed by premium year."
+  ],
+  "activeYear": 2026,
+  "years": {
+    "2026": {
+      "federal": {
+        "ordinaryBrackets": {
+          "_noteQualifyingSurvivingSpouse": "Qualifying surviving spouse uses the married (joint) brackets via the fallback.",
+          "single": [
+            { "rate": 0.1, "min": 0, "max": 12400 },
+            { "rate": 0.12, "min": 12400, "max": 50400 },
+            { "rate": 0.22, "min": 50400, "max": 105700 },
+            { "rate": 0.24, "min": 105700, "max": 201775 },
+            { "rate": 0.32, "min": 201775, "max": 256225 },
+            { "rate": 0.35, "min": 256225, "max": 640600 },
+            { "rate": 0.37, "min": 640600, "max": null }
+          ],
+          "married": [
+            { "rate": 0.1, "min": 0, "max": 24800 },
+            { "rate": 0.12, "min": 24800, "max": 100800 },
+            { "rate": 0.22, "min": 100800, "max": 211400 },
+            { "rate": 0.24, "min": 211400, "max": 403550 },
+            { "rate": 0.32, "min": 403550, "max": 512450 },
+            { "rate": 0.35, "min": 512450, "max": 768700 },
+            { "rate": 0.37, "min": 768700, "max": null }
+          ],
+          "marriedFilingSeparately": [
+            { "rate": 0.1, "min": 0, "max": 12400 },
+            { "rate": 0.12, "min": 12400, "max": 50400 },
+            { "rate": 0.22, "min": 50400, "max": 105700 },
+            { "rate": 0.24, "min": 105700, "max": 201775 },
+            { "rate": 0.32, "min": 201775, "max": 256225 },
+            { "rate": 0.35, "min": 256225, "max": 384350 },
+            { "rate": 0.37, "min": 384350, "max": null }
+          ],
+          "hoh": [
+            { "rate": 0.1, "min": 0, "max": 17700 },
+            { "rate": 0.12, "min": 17700, "max": 67450 },
+            { "rate": 0.22, "min": 67450, "max": 105700 },
+            { "rate": 0.24, "min": 105700, "max": 201750 },
+            { "rate": 0.32, "min": 201750, "max": 256200 },
+            { "rate": 0.35, "min": 256200, "max": 640600 },
+            { "rate": 0.37, "min": 640600, "max": null }
+          ]
+        },
+        "capitalGainsBrackets": {
+          "_noteQualifyingSurvivingSpouse": "Qualifying surviving spouse uses the married (joint) thresholds via the fallback.",
+          "single": [
+            { "rate": 0.0, "min": 0, "max": 49450 },
+            { "rate": 0.15, "min": 49450, "max": 545500 },
+            { "rate": 0.2, "min": 545500, "max": null }
+          ],
+          "married": [
+            { "rate": 0.0, "min": 0, "max": 98900 },
+            { "rate": 0.15, "min": 98900, "max": 613700 },
+            { "rate": 0.2, "min": 613700, "max": null }
+          ],
+          "marriedFilingSeparately": [
+            { "rate": 0.0, "min": 0, "max": 49450 },
+            { "rate": 0.15, "min": 49450, "max": 306850 },
+            { "rate": 0.2, "min": 306850, "max": null }
+          ],
+          "hoh": [
+            { "rate": 0.0, "min": 0, "max": 66200 },
+            { "rate": 0.15, "min": 66200, "max": 579600 },
+            { "rate": 0.2, "min": 579600, "max": null }
+          ]
+        },
+        "standardDeduction": {
+          "single": 16100,
+          "married": 32200,
+          "qualifyingSurvivingSpouse": 32200,
+          "marriedFilingSeparately": 16100,
+          "hoh": 24150
+        },
+        "agedAdditionalStandardDeduction": {
+          "_note": "Added to the standard deduction for each filer (and spouse, if filing jointly) at or above this age. Rev. Proc. 2025-32 sec. 3.14(3). The separate amount for blindness is not modeled.",
+          "age": 65,
+          "perPerson": {
+            "single": 2050,
+            "hoh": 2050,
+            "married": 1650,
+            "qualifyingSurvivingSpouse": 1650,
+            "marriedFilingSeparately": 1650
+          }
+        },
+        "seniorDeduction": {
+          "_note": "OBBBA enhanced deduction for seniors, Schedule 1-A Part V. Applies 2025-2028 only: set this whole entry to null for 2029 and later. Per person = perPerson minus phaseOutRate x (MAGI over threshold), not below zero.",
+          "age": 65,
+          "perPerson": 6000,
+          "phaseOutRate": 0.06,
+          "phaseOutMagiThreshold": {
+            "single": 75000,
+            "hoh": 75000,
+            "qualifyingSurvivingSpouse": 75000,
+            "married": 150000
+          },
+          "ineligibleFilingStatuses": [
+            "marriedFilingSeparately"
+          ]
+        },
+        "capitalLossDeductionLimit": {
+          "single": 3000,
+          "married": 3000,
+          "marriedFilingSeparately": 1500
+        },
+        "socialSecurityTaxabilityThresholds": {
+          "single": {
+            "base": 25000,
+            "adjusted": 34000
+          },
+          "hoh": {
+            "base": 25000,
+            "adjusted": 34000
+          },
+          "qualifyingSurvivingSpouse": {
+            "base": 25000,
+            "adjusted": 34000
+          },
+          "married": {
+            "base": 32000,
+            "adjusted": 44000
+          },
+          "marriedFilingSeparately": {
+            "base": 0,
+            "adjusted": 0
+          },
+          "_noteLivedApart": "Pub 915: married filing separately who lived apart from their spouse ALL year use the single base amounts; living together at any time gives a $0 base.",
+          "marriedFilingSeparatelyLivedApart": {
+            "base": 25000,
+            "adjusted": 34000
+          }
+        },
+        "niit": {
+          "rate": 0.038,
+          "thresholds": {
+            "single": 200000,
+            "hoh": 200000,
+            "married": 250000,
+            "qualifyingSurvivingSpouse": 250000,
+            "marriedFilingSeparately": 125000
+          }
+        },
+        "rmdStartAge": {
+          "default": 73,
+          "bornIn1960OrLater": 75
+        }
+      },
+      "utah": {
+        "flatRate": 0.0445,
+        "taxpayerCredit": {
+          "_note": "Utah taxpayer tax credit (Utah Code 59-10-1018; TC-40 lines 11-20): creditRate x (federal standard deduction incl. the 65+ extra + personalExemption per dependent), reduced by phaseOutRate x Utah taxable income above basePhaseOut. Utah publishes each year's amounts in that year's TC-40 instructions; the 2026 ones were not out yet, so these are the 2025 amounts (amountsYear). Replace them and set amountsYear to 2026 when they are published.",
+          "amountsYear": 2025,
+          "creditRate": 0.06,
+          "personalExemption": 2111,
+          "phaseOutRate": 0.013,
+          "basePhaseOut": {
+            "single": 18213,
+            "married": 36426,
+            "marriedFilingSeparately": 18213,
+            "hoh": 27320,
+            "qualifyingSurvivingSpouse": 36426
+          }
+        },
+        "socialSecurityCredit": {
+          "_note": "Utah Social Security benefits credit (Utah Code 59-10-1042; TC-40A code AH): flatRate x taxable Social Security benefits, reduced by phaseOutRate x modified AGI above the threshold. The thresholds are fixed in the statute (not indexed); these are the 2025-and-later amounts. Nonrefundable; applied after the taxpayer credit.",
+          "phaseOutRate": 0.025,
+          "phaseOutThreshold": {
+            "single": 54000,
+            "married": 90000,
+            "marriedFilingSeparately": 45000,
+            "hoh": 90000,
+            "qualifyingSurvivingSpouse": 90000
+          }
+        },
+        "retirementCredit": {
+          "_note": "Utah retirement credit (Utah Code 59-10-1019; TC-40A code 18): perPerson for each filer (and joint-return spouse) born on or before Dec. 31 of bornOnOrBefore, reduced by phaseOutRate x modified AGI above the threshold. Cannot be combined with the Social Security credit; the planner uses whichever is larger. Amounts from the 2025 TC-40 instructions.",
+          "perPerson": 450,
+          "bornOnOrBefore": 1952,
+          "phaseOutRate": 0.025,
+          "phaseOutThreshold": {
+            "single": 25000,
+            "married": 32000,
+            "marriedFilingSeparately": 16000,
+            "hoh": 32000,
+            "qualifyingSurvivingSpouse": 32000
+          }
+        }
+      }
+    }
+  },
+  "medicare": {
+    "_howToUpdate": [
+      "Each November CMS publishes the next year's Part B premium and IRMAA table. Add it under premiumYears, keyed by the year the premiums apply to (not the income year).",
+      "IRMAA for a tax year's income is set by the table lookbackYears later (2026 income -> 2028 premiums). The planner uses that year's published table if it is here; otherwise it projects the newest published table forward only the missing years, so each November's update shortens the projection.",
+      "The growth rates under projection are assumptions: review them each year against the latest published changes."
+    ],
+    "eligibilityAge": 65,
+    "lookbackYears": 2,
+    "projection": {
+      "_noteThresholds": "Income thresholds are indexed to CPI-U and rounded to the nearest $1,000 (SSA sec. 1839(i)(5)). Default 2.8% = the 2025->2026 change ($106,000 -> $109,000).",
+      "thresholdInflationRate": 0.028,
+      "thresholdRounding": 1000,
+      "_noteStatutory": "The statutory single-filer dollar amounts every lower threshold is indexed from (sec. 1839(i)(3)(C)); joint thresholds are twice the single ones. Used to reproduce SSA's per-tier rounding when projecting.",
+      "statutoryThresholdsSingle": [85000, 107000, 133500, 160000],
+      "_noteTop": "The top threshold ($500,000 single / $750,000 joint) is fixed by law through this year and indexed to CPI-U from the year after.",
+      "topThresholdFixedThrough": 2027,
+      "_noteSurcharges": "Surcharges and base premiums follow Medicare costs, not CPI. Defaults: Part B 7.8% = average of the 2025 (+5.9%) and 2026 (+9.7%) Part B premium increases; Part D 6% ~ the 2026 top-tier Part D surcharge increase (+6.1%).",
+      "partBGrowthRate": 0.078,
+      "partDGrowthRate": 0.06
+    },
+    "premiumYears": {
+      "2026": {
+        "_source": "CMS fact sheets: 2026 Medicare Parts A & B Premiums and Deductibles; 2026 Part D bid information (Part D base beneficiary premium).",
+        "_notePremiums": "Per-person monthly base premiums before IRMAA. Part D varies by plan: this default is the CMS national base beneficiary premium; replace it with your own plan's premium for a closer estimate.",
+        "partBStandardMonthlyPremium": 202.9,
+        "partDEstimatedMonthlyPremium": 38.99,
+        "irmaaBrackets": {
+          "single": [
+            { "magi": 0, "magiMax": 109000, "partB": 0, "partD": 0, "description": "No IRMAA" },
+            { "magi": 109000, "magiMax": 137000, "partB": 81.2, "partD": 14.5, "description": "Bracket 1" },
+            { "magi": 137000, "magiMax": 171000, "partB": 202.9, "partD": 37.5, "description": "Bracket 2" },
+            { "magi": 171000, "magiMax": 205000, "partB": 324.6, "partD": 60.4, "description": "Bracket 3" },
+            { "magi": 205000, "magiMax": 500000, "partB": 446.3, "partD": 83.3, "description": "Bracket 4" },
+            { "magi": 500000, "magiMax": null, "partB": 487.0, "partD": 91.0, "description": "Bracket 5 (Top)" }
+          ],
+          "married": [
+            { "magi": 0, "magiMax": 218000, "partB": 0, "partD": 0, "description": "No IRMAA" },
+            { "magi": 218000, "magiMax": 274000, "partB": 81.2, "partD": 14.5, "description": "Bracket 1" },
+            { "magi": 274000, "magiMax": 342000, "partB": 202.9, "partD": 37.5, "description": "Bracket 2" },
+            { "magi": 342000, "magiMax": 410000, "partB": 324.6, "partD": 60.4, "description": "Bracket 3" },
+            { "magi": 410000, "magiMax": 750000, "partB": 446.3, "partD": 83.3, "description": "Bracket 4" },
+            { "magi": 750000, "magiMax": null, "partB": 487.0, "partD": 91.0, "description": "Bracket 5 (Top)" }
+          ],
+          "_noteMarriedFilingSeparately": "CMS: applies to those who lived with their spouse at any time during the year and file separately. Lived apart all year uses the single table.",
+          "marriedFilingSeparately": [
+            { "magi": 0, "magiMax": 109000, "partB": 0, "partD": 0, "description": "No IRMAA" },
+            { "magi": 109000, "magiMax": 391000, "partB": 446.3, "partD": 83.3, "description": "MFS Bracket 1" },
+            { "magi": 391000, "magiMax": null, "partB": 487.0, "partD": 91.0, "description": "MFS Bracket 2 (Top)" }
+          ]
+        }
+      }
+    }
+  }
+}
