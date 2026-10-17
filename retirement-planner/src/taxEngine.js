@@ -735,6 +735,8 @@ export const createTaxEngine = ({ personalInfo, stocks, crypto, metals, socialSe
     calculateHoldingPeriod,
     calculateLotMetrics,
     selectLots,
+    calculateTax,
+    calculateCapitalGainsTax,
     calculateScenario,
   };
 };
