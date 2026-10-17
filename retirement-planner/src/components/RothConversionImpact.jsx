@@ -101,7 +101,7 @@ export default function RothConversionImpact({ activeScenario, calculateScenario
                     {results.currentBracket && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Room Remaining in Bracket:</span>
-                        <span className="font-medium">${results.roomInBracket > 0 ? Math.round(results.roomInBracket).toLocaleString() : '0 (maxed out)'}</span>
+                        <span className="font-medium">{!Number.isFinite(results.roomInBracket) ? 'No limit (top bracket)' : `$${results.roomInBracket > 0 ? Math.round(results.roomInBracket).toLocaleString() : '0 (maxed out)'}`}</span>
                       </div>
                     )}
                   </div>
@@ -122,7 +122,7 @@ export default function RothConversionImpact({ activeScenario, calculateScenario
                 <div className="mt-4 space-y-3">
                   <h3 className="font-medium text-gray-700 border-b pb-2">Optimization Suggestions</h3>
 
-                  {results.roomInBracket > 0 && results.roomInBracket > results.rothConversion && (
+                  {Number.isFinite(results.roomInBracket) && results.roomInBracket > 0 && results.roomInBracket > results.rothConversion && (
                     <div className="p-3 bg-green-50 border border-green-200 rounded-md">
                       <p className="text-sm text-green-800">
                         <strong>✓ Good positioning:</strong> You have ${Math.round(results.roomInBracket).toLocaleString()} remaining in your {(results.currentBracket.rate * 100)}% bracket.

@@ -149,7 +149,7 @@ export default function IrmaaAnalysis({ irmaaBracketsFor, irmaaFilingStatus, per
             <h3 className="font-medium text-gray-700 border-b pb-2">IRMAA Planning</h3>
             {results.currentIRMAABracket && (
               <>
-                {results.roomToNextIRMAABracket > 0 ? (
+                {Number.isFinite(results.roomToNextIRMAABracket) && results.roomToNextIRMAABracket > 0 ? (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-700 font-medium">Room to Next Bracket:</span>

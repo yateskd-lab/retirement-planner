@@ -1,0 +1,97 @@
+// The screens that show "room left in the bracket". In the top income bracket, and the
+// top IRMAA bracket, there is no next bracket and the engine reports Infinity. The
+// screens must say so in words, never print an infinite dollar amount.
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { PROJECTED_IRMAA_BRACKETS } from './taxConfig';
+import { createDefaultPersonalInfo, createDefaultSocialSecurity } from './defaults';
+import { noIncome, makeEngine, makeScenario } from './testHelpers';
+import TaxSummaryGrid from './components/TaxSummaryGrid';
+import RothConversionImpact from './components/RothConversionImpact';
+import IrmaaAnalysis from './components/IrmaaAnalysis';
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 9, 16, 12, 0, 0));
+});
+afterEach(() => vi.useRealTimers());
+
+const personalInfo = { ...createDefaultPersonalInfo(), ...noIncome, age: 66 };
+const socialSecurity = { ...createDefaultSocialSecurity(), enabled: false };
+const engine = makeEngine({ personalInfo });
+
+// Renders one screen for a scenario and returns its text.
+const render = (Component, scenario, extraProps = {}) => {
+  const results = engine.calculateScenario(scenario);
+  const props = {
+    federalRules: engine.federalRules,
+    getActiveScenario: () => scenario,
+    activeScenario: scenario,
+    calculateScenario: engine.calculateScenario,
+    irmaaBracketsFor: engine.irmaaBracketsFor,
+    irmaaFilingStatus: engine.irmaaFilingStatus,
+    personalInfo,
+    socialSecurity,
+    results,
+    ...extraProps,
+  };
+  return { results, html: renderToStaticMarkup(<Component {...props} />) };
+};
+
+const withIRA = (amount, extra = {}) => makeScenario({ withdrawals: { traditionalIRA: amount }, ...extra });
+const noInfinity = (html) => {
+  expect(html).not.toContain('∞');
+  expect(html).not.toContain('Infinity');
+  expect(html).not.toContain('NaN');
+};
+
+describe('income tax bracket room on screen', () => {
+  it('shows a dollar amount when there is room', () => {
+    const { results, html } = render(TaxSummaryGrid, withIRA(60000));
+    expect(Number.isFinite(results.roomInBracket)).toBe(true);
+    expect(html).toContain(Math.round(results.roomInBracket).toLocaleString());
+    expect(html).not.toContain('In highest bracket');
+  });
+
+  it('says "In highest bracket" in the top bracket', () => {
+    const { results, html } = render(TaxSummaryGrid, withIRA(900000));
+    expect(results.roomInBracket).toBe(Infinity);
+    expect(html).toContain('In highest bracket');
+    noInfinity(html);
+  });
+
+  it('Roth screen: gives a no-limit message in the top bracket and no infinite suggestion', () => {
+    const { html } = render(RothConversionImpact, withIRA(900000, { rothConversion: 20000 }));
+    expect(html).toContain('No limit (top bracket)');
+    expect(html).not.toContain('Good positioning');
+    noInfinity(html);
+  });
+
+  it('Roth screen: still suggests the remaining room when there is some', () => {
+    const { results, html } = render(RothConversionImpact, withIRA(60000, { rothConversion: 5000 }));
+    expect(Number.isFinite(results.roomInBracket)).toBe(true);
+    expect(html).toContain('Room Remaining in Bracket');
+    expect(html).toContain(Math.round(results.roomInBracket).toLocaleString());
+    noInfinity(html);
+  });
+});
+
+describe('IRMAA bracket room on screen', () => {
+  const top = PROJECTED_IRMAA_BRACKETS.single[PROJECTED_IRMAA_BRACKETS.single.length - 1];
+
+  it('shows the room to the next bracket when there is one', () => {
+    const { results, html } = render(IrmaaAnalysis, withIRA(60000));
+    expect(Number.isFinite(results.roomToNextIRMAABracket)).toBe(true);
+    expect(html).toContain('Room to Next Bracket');
+    noInfinity(html);
+  });
+
+  it('says "highest IRMAA bracket" in the top bracket', () => {
+    const { results, html } = render(IrmaaAnalysis, withIRA(top.magi + 50000));
+    expect(results.roomToNextIRMAABracket).toBe(Infinity);
+    expect(html).toContain('highest IRMAA bracket');
+    expect(html).not.toContain('Room to Next Bracket');
+    noInfinity(html);
+  });
+});

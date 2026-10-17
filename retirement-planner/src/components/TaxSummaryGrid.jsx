@@ -251,7 +251,7 @@ export default function TaxSummaryGrid({ federalRules, getActiveScenario, person
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Room to Next Bracket:</span>
                   <span className="font-medium text-blue-600">
-                    {results.roomInBracket > 0 ? `${Math.round(results.roomInBracket).toLocaleString()}` : 'In highest bracket'}
+                    {Number.isFinite(results.roomInBracket) && results.roomInBracket > 0 ? `${Math.round(results.roomInBracket).toLocaleString()}` : 'In highest bracket'}
                   </span>
                 </div>
               </>
