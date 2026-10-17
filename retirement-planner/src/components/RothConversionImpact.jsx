@@ -131,6 +131,15 @@ export default function RothConversionImpact({ activeScenario, calculateScenario
                     </div>
                   )}
 
+                  {!Number.isFinite(results.roomInBracket) && results.currentBracket && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                      <p className="text-sm text-blue-800">
+                        <strong>ℹ Top bracket:</strong> You're already in the {Math.round(results.currentBracket.rate * 100)}% bracket;
+                        additional conversions are taxed at {Math.round(results.currentBracket.rate * 100)}%.
+                      </p>
+                    </div>
+                  )}
+
                   {results.roomInBracket <= 0 && (
                     <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                       <p className="text-sm text-yellow-800">
