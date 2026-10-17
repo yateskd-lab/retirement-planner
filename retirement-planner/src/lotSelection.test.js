@@ -3,11 +3,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { makeEngine } from './testHelpers';
 
-const TODAY = '2026-10-16T12:00:00Z';
+// "Today" is noon on 16 Oct 2026 in whatever time zone the tests run in, so the
+// calendar day is the same on every machine.
+const atLocalNoon = (y, m, d) => vi.setSystemTime(new Date(y, m - 1, d, 12, 0, 0));
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date(TODAY));
+  atLocalNoon(2026, 10, 16);
 });
 afterEach(() => vi.useRealTimers());
 
@@ -40,20 +42,45 @@ describe('holding period', () => {
   });
 
   it('reports the number of days held', () => {
+    vi.setSystemTime(new Date('2026-10-16T12:00:00Z')); // an exact instant, for the arithmetic
     expect(calculateHoldingPeriod('2026-10-06').days).toBeCloseTo(10.5, 1);
   });
 
-  // KNOWN ISSUE. The IRS needs MORE than one year: a lot bought 2025-10-16 is still
-  // short-term on 2026-10-16 and turns long-term on 2026-10-17. The engine's own
-  // comment says the same, but it flips at the start of the anniversary date. This
-  // test states the correct rule and is expected to fail until the engine is fixed;
-  // when it is fixed Vitest will say so, and `.fails` can be removed.
-  it.fails('treats a lot as short-term on its one-year anniversary date', () => {
-    expect(calculateHoldingPeriod('2025-10-16').isLongTerm).toBe(false);
+  // The IRS needs MORE than one year: a lot bought 2025-10-16 is still short-term on
+  // 2026-10-16 and turns long-term on 2026-10-17.
+  it('is short-term on the one-year anniversary date and long-term the day after', () => {
+    expect(calculateHoldingPeriod('2025-10-17').isLongTerm).toBe(false); // day before anniversary
+    expect(calculateHoldingPeriod('2025-10-16').isLongTerm).toBe(false); // the anniversary itself
+    expect(calculateHoldingPeriod('2025-10-15').isLongTerm).toBe(true);  // anniversary was yesterday
+    expect(calculateHoldingPeriod('2025-10-14').isLongTerm).toBe(true);
   });
 
-  it('treats a lot as long-term the day after its anniversary', () => {
-    expect(calculateHoldingPeriod('2025-10-15').isLongTerm).toBe(true);
+  it('gives the same answer at any time of day', () => {
+    [[0, 5], [6, 0], [12, 0], [23, 59]].forEach(([h, m]) => {
+      vi.setSystemTime(new Date(2026, 9, 16, h, m, 0));
+      expect(calculateHoldingPeriod('2025-10-16').isLongTerm).toBe(false);
+      vi.setSystemTime(new Date(2026, 9, 17, h, m, 0));
+      expect(calculateHoldingPeriod('2025-10-16').isLongTerm).toBe(true);
+    });
+  });
+
+  it('handles a leap-day purchase: the anniversary falls on Feb 28', () => {
+    atLocalNoon(2025, 2, 28);
+    expect(calculateHoldingPeriod('2024-02-29').isLongTerm).toBe(false);
+    atLocalNoon(2025, 3, 1);
+    expect(calculateHoldingPeriod('2024-02-29').isLongTerm).toBe(true);
+  });
+
+  it('treats a purchase on the last day of a month correctly', () => {
+    atLocalNoon(2026, 1, 31);
+    expect(calculateHoldingPeriod('2025-01-31').isLongTerm).toBe(false);
+    atLocalNoon(2026, 2, 1);
+    expect(calculateHoldingPeriod('2025-01-31').isLongTerm).toBe(true);
+  });
+
+  it('treats an unreadable date as short-term', () => {
+    expect(calculateHoldingPeriod('not a date').isLongTerm).toBe(false);
+    expect(calculateHoldingPeriod('').isLongTerm).toBe(false);
   });
 });
 

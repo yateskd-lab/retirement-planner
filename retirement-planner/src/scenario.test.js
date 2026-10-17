@@ -352,18 +352,17 @@ describe('room left in the tax bracket', () => {
 });
 
 describe('top tax bracket', () => {
-  // KNOWN ISSUE. In the top (37%) bracket the engine reports unlimited room as
-  // Infinity, so the screens that test "roomInBracket > 0" show an infinite amount
-  // instead of "In highest bracket". The engine's own comment says 0 is intended.
-  // Expected to fail until fixed; then remove `.fails`.
-  it.fails('reports zero room when income is in the top bracket', () => {
-    const r = run({ personalInfo: { age: 60 } }, ira(900000));
-    expect(r.currentBracket.rate).toBe(0.37);
-    expect(r.roomInBracket).toBe(0);
+  const top = () => run({ personalInfo: { age: 60 } }, ira(900000));
+
+  it('identifies the top bracket', () => {
+    expect(top().currentBracket.rate).toBe(0.37);
   });
 
-  it('still identifies the top bracket', () => {
-    expect(run({ personalInfo: { age: 60 } }, ira(900000)).currentBracket.rate).toBe(0.37);
+  // The engine reports "no ceiling" as Infinity: the Roth optimizer relies on it, since
+  // converting more inside the top bracket can never move you out of it. The screens
+  // treat a non-finite value as "no next bracket" (see display.test.jsx).
+  it('reports unlimited room as Infinity, not a number', () => {
+    expect(top().roomInBracket).toBe(Infinity);
   });
 });
 

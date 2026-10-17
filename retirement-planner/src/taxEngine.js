@@ -84,12 +84,23 @@ export const createTaxEngine = ({ personalInfo, stocks, crypto, metals, socialSe
     // not ">= 365 days". Buy Jan 2 and sell the following Jan 2 and it is still
     // short-term; you must hold to Jan 3. Comparing against the anniversary date
     // also stays correct across leap years, which a flat 365 does not.
-    const anniversary = new Date(purchase);
-    anniversary.setFullYear(anniversary.getFullYear() + 1);
+    //
+    // Both sides are compared as whole calendar days. A purchase date has no time of
+    // day, so comparing timestamps made the lot long-term at the very start of its
+    // anniversary date, a day early. The purchase date is read as typed (UTC parts of
+    // the date string); "today" is the user's own calendar day.
+    const pad = (n) => String(n).padStart(2, '0');
+    const year = purchase.getUTCFullYear() + 1;
+    const month = purchase.getUTCMonth();
+    // A Feb 29 purchase has its anniversary on Feb 28 in a non-leap year.
+    const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    const day = Math.min(purchase.getUTCDate(), lastDay);
+    const anniversaryDay = `${year}-${pad(month + 1)}-${pad(day)}`;
+    const todayDay = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
     return {
       days: diffInDays,
-      isLongTerm: today > anniversary
+      isLongTerm: todayDay > anniversaryDay
     };
   };
 
