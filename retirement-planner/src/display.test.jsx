@@ -68,6 +68,28 @@ describe('income tax bracket room on screen', () => {
     noInfinity(html);
   });
 
+  it('Roth screen: tells you the top-bracket rate applies to further conversions', () => {
+    const { results, html } = render(RothConversionImpact, withIRA(900000, { rothConversion: 20000 }));
+    const rate = Math.round(results.currentBracket.rate * 100);
+    expect(rate).toBe(37);
+    expect(html).toContain('Top bracket:');
+    expect(html).toContain(`already in the ${rate}% bracket`);
+    expect(html).toContain(`additional conversions are taxed at ${rate}%`);
+  });
+
+  it('Roth screen: the top-bracket note does not appear when there is room left', () => {
+    const { html } = render(RothConversionImpact, withIRA(60000, { rothConversion: 5000 }));
+    expect(html).not.toContain('Top bracket:');
+    expect(html).not.toContain('already in the');
+  });
+
+  it('Roth screen: a conversion that lands you in the top bracket triggers the note', () => {
+    // 640,600 is where the single 37% bracket starts; this converts well past it
+    const { results, html } = render(RothConversionImpact, withIRA(500000, { rothConversion: 400000 }));
+    expect(results.currentBracket.rate).toBe(0.37);
+    expect(html).toContain('already in the 37% bracket');
+  });
+
   it('Roth screen: still suggests the remaining room when there is some', () => {
     const { results, html } = render(RothConversionImpact, withIRA(60000, { rothConversion: 5000 }));
     expect(Number.isFinite(results.roomInBracket)).toBe(true);
