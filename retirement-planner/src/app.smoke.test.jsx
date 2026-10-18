@@ -10,7 +10,7 @@ import App from './RetirementTaxPlanner';
 // The PDF libraries are only used when the PDF button is clicked. In a test run their Node
 // builds can need packages that are not installed (jsPDF wants 'atob'), so stand them in.
 vi.mock('jspdf', () => ({ default: class FakeJsPDF {} }));
-vi.mock('html2canvas', () => ({ default: async () => ({}) }));
+vi.mock('html2canvas-pro', () => ({ default: async () => ({}) }));
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
