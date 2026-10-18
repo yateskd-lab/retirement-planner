@@ -1,0 +1,338 @@
+import React from 'react';
+import { DollarSign, TrendingDown, AlertCircle } from 'lucide-react';
+import { IRMAA_PROJECTED, IRMAA_PROJECTION_YEARS } from '../taxConfig';
+
+export default function RetirementWithdrawals({ accounts, calculateScenario, getActiveScenario, irmaaBracketsFor, irmaaBuffer, irmaaFilingStatus, rothOptimizationStrategy, setIrmaaBuffer, setRothOptimizationStrategy, updateActiveScenario, updateWithdrawal }) {
+  return (
+    <>
+      {/* Retirement & Savings Account Withdrawals + Roth Conversion */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6 pdf-section pdf-detail-only">
+        <h2 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
+          <DollarSign className="w-5 h-5 text-blue-600" />
+          Retirement & Savings Account Withdrawals
+        </h2>
+        <h3 className="font-medium text-gray-700 mb-3">Account Withdrawals</h3>
+        <div className="grid md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Savings <span className="text-xs text-green-600">(Tax-Free)</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-gray-500">$</span>
+              <input
+                type="text"
+                value={getActiveScenario().withdrawals.savings.toLocaleString()}
+                onChange={(e) => updateWithdrawal('savings', e.target.value.replace(/,/g, ''))}
+                className="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Traditional IRA <span className="text-xs text-red-600">(Ordinary Income)</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-gray-500">$</span>
+              <input
+                type="text"
+                value={getActiveScenario().withdrawals.traditionalIRA.toLocaleString()}
+                onChange={(e) => updateWithdrawal('traditionalIRA', e.target.value.replace(/,/g, ''))}
+                className="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Roth IRA <span className="text-xs text-green-600">(Tax-Free)</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-gray-500">$</span>
+              <input
+                type="text"
+                value={getActiveScenario().withdrawals.rothIRA.toLocaleString()}
+                onChange={(e) => updateWithdrawal('rothIRA', e.target.value.replace(/,/g, ''))}
+                className="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Traditional 401(k) <span className="text-xs text-red-600">(Ordinary Income)</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-gray-500">$</span>
+              <input
+                type="text"
+                value={getActiveScenario().withdrawals.traditional401k.toLocaleString()}
+                onChange={(e) => updateWithdrawal('traditional401k', e.target.value.replace(/,/g, ''))}
+                className="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Roth 401(k) <span className="text-xs text-green-600">(Tax-Free)</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-gray-500">$</span>
+              <input
+                type="text"
+                value={getActiveScenario().withdrawals.roth401k.toLocaleString()}
+                onChange={(e) => updateWithdrawal('roth401k', e.target.value.replace(/,/g, ''))}
+                className="w-full pl-7 px-3 py-2 border border-gray-300 rounded-md"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Roth Conversion */}
+        <div className="mt-6">
+          <h3 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
+            <TrendingDown className="w-4 h-4 text-indigo-600" />
+            Roth Conversion Planning
+          </h3>
+          <p className="text-xs text-gray-600 mb-3">
+            Convert Traditional IRA/401(k) funds to Roth. You'll pay tax now, but future growth and withdrawals will be tax-free.
+          </p>
+
+          {/* Optimization Strategy Selector */}
+          <div className="mb-4 pb-4 border-b border-indigo-200">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Optimization Strategy:
+            </label>
+            <div className="space-y-2">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="rothStrategy"
+                  value="conservative"
+                  checked={rothOptimizationStrategy === 'conservative'}
+                  onChange={(e) => setRothOptimizationStrategy(e.target.value)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-800">Conservative - Stay in Current Tax Bracket</div>
+                  <div className="text-xs text-gray-600">Maximize conversion without jumping to the next tax bracket</div>
+                </div>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="rothStrategy"
+                  value="irmaa"
+                  checked={rothOptimizationStrategy === 'irmaa'}
+                  onChange={(e) => setRothOptimizationStrategy(e.target.value)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-800">Moderate - Optimize for IRMAA (Recommended)</div>
+                  <div className="text-xs text-gray-600">Maximize conversion up to IRMAA threshold, even if crossing tax bracket</div>
+                </div>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="rothStrategy"
+                  value="aggressive"
+                  checked={rothOptimizationStrategy === 'aggressive'}
+                  onChange={(e) => setRothOptimizationStrategy(e.target.value)}
+                  className="mt-1"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-gray-800">Aggressive - Maximize Conversion</div>
+                  <div className="text-xs text-gray-600">Fill to the top of the next IRMAA bracket, accepting one IRMAA tier increase for maximum long-term Roth growth</div>
+                </div>
+              </label>
+            </div>
+
+            {/* IRMAA Buffer */}
+            <div className="mt-3">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                IRMAA Safety Buffer ({IRMAA_PROJECTED ? `${IRMAA_PROJECTION_YEARS}-year projection uncertainty` : 'published table, little uncertainty'}):
+              </label>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <span className="absolute left-2 top-0.5 text-gray-500 text-xs">$</span>
+                  <input
+                    type="text"
+                    value={irmaaBuffer.toLocaleString()}
+                    onChange={(e) => setIrmaaBuffer(parseFloat(e.target.value.replace(/,/g, '')) || 0)}
+                    className="w-32 pl-5 px-2 py-1 border border-gray-300 rounded text-sm"
+                  />
+                </div>
+                <span className="text-xs text-gray-600">Reduce suggested amount by this buffer to account for IRMAA bracket inflation uncertainty</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Roth Conversion Amount <span className="text-xs text-orange-600">(Taxed as Ordinary Income)</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-gray-500">$</span>
+              <input
+                type="text"
+                value={(getActiveScenario().rothConversion || 0).toLocaleString()}
+                onChange={(e) => updateActiveScenario({ rothConversion: parseFloat(e.target.value.replace(/,/g, '')) || 0 })}
+                className="w-full pl-7 px-3 py-2 border border-indigo-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+                placeholder="Enter amount to convert"
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Max available: ${(accounts.traditionalIRA + accounts.traditional401k).toLocaleString()}
+            </p>
+          </div>
+
+          {/* Smart Optimizer */}
+          {(() => {
+            // Calculate baseline scenario without conversion
+            const baselineScenario = { ...getActiveScenario(), rothConversion: 0 };
+            const baselineResults = calculateScenario(baselineScenario);
+
+            // Calculate constraints with IRMAA buffer applied
+            const taxBracketRoom = baselineResults.roomInBracket > 0 ? baselineResults.roomInBracket : 0;
+            const irmaaRoomRaw = baselineResults.roomToNextIRMAABracket > 0 ? baselineResults.roomToNextIRMAABracket : 0;
+            const irmaaRoom = Math.max(0, irmaaRoomRaw - irmaaBuffer); // Apply buffer
+            const niitRoom = baselineResults.magi < baselineResults.niitThreshold
+              ? baselineResults.niitThreshold - baselineResults.magi
+              : 0;
+
+            // Find next IRMAA bracket threshold for aggressive mode
+            const irmaaBrackets = irmaaBracketsFor(irmaaFilingStatus);
+            let roomToNextIRMAABracket = 0;
+            if (baselineResults.currentIRMAABracket) {
+              const currentIndex = irmaaBrackets.findIndex(b => b.magi === baselineResults.currentIRMAABracket.magi);
+              if (currentIndex >= 0 && currentIndex < irmaaBrackets.length - 1) {
+                // Find the next IRMAA bracket threshold (one bracket up)
+                const nextBracket = irmaaBrackets[currentIndex + 1];
+                if (nextBracket.magiMax !== Infinity) {
+                  roomToNextIRMAABracket = Math.max(0, nextBracket.magiMax - baselineResults.magi - irmaaBuffer);
+                } else {
+                  // The bracket above is the top one, so there is no IRMAA ceiling
+                  // beyond it. Represent that as Infinity rather than a magic
+                  // 1000000, which the guard below used to exclude -- silently
+                  // turning Aggressive into the Moderate answer while the panel
+                  // still advertised "$1,000,000" of room.
+                  roomToNextIRMAABracket = Infinity;
+                }
+              }
+            }
+
+            // Determine the limiting factor and optimal amount based on strategy
+            let optimalAmount = 0;
+            let limitingFactor = '';
+            let reason = '';
+
+            if (rothOptimizationStrategy === 'conservative') {
+              // Conservative: Stay in current tax bracket
+              if (taxBracketRoom > 0) {
+                optimalAmount = Math.floor(taxBracketRoom);
+                limitingFactor = 'Tax Bracket';
+                reason = `Fills your ${(baselineResults.currentBracket.rate * 100)}% tax bracket without jumping to the next bracket.`;
+              }
+            } else if (rothOptimizationStrategy === 'irmaa') {
+              // Moderate: Optimize for IRMAA (can cross tax bracket)
+              if (irmaaRoom > 0) {
+                optimalAmount = Math.floor(irmaaRoom);
+                limitingFactor = 'IRMAA Threshold';
+                reason = `Maximizes conversion up to IRMAA threshold (with $${irmaaBuffer.toLocaleString()} buffer), even if crossing tax brackets.`;
+              } else if (taxBracketRoom > 0) {
+                // Fallback to tax bracket if at IRMAA limit
+                optimalAmount = Math.floor(taxBracketRoom);
+                limitingFactor = 'Tax Bracket';
+                reason = 'Already at IRMAA threshold. Fills current tax bracket instead.';
+              }
+            } else if (rothOptimizationStrategy === 'aggressive') {
+              // Aggressive: Maximize conversion up to next IRMAA bracket threshold
+              if (Number.isFinite(roomToNextIRMAABracket) && roomToNextIRMAABracket > 0) {
+                optimalAmount = Math.floor(roomToNextIRMAABracket);
+                limitingFactor = 'Next IRMAA Bracket Threshold';
+                reason = `Maximizes conversion by filling to the top of the NEXT IRMAA bracket (with $${irmaaBuffer.toLocaleString()} buffer). Accepts crossing current IRMAA threshold for maximum Roth conversion.`;
+              } else if (!Number.isFinite(roomToNextIRMAABracket) && taxBracketRoom > 0) {
+                // No IRMAA bracket above this one, so IRMAA imposes no ceiling and
+                // the tax bracket is the only remaining limit.
+                optimalAmount = Math.floor(taxBracketRoom);
+                limitingFactor = 'Tax Bracket';
+                reason = 'There is no IRMAA bracket above your current one, so IRMAA sets no upper limit. Fills your current tax bracket instead.';
+              } else if (irmaaRoom > 0) {
+                // Fallback to current IRMAA room
+                optimalAmount = Math.floor(irmaaRoom);
+                limitingFactor = 'Current IRMAA Threshold';
+                reason = `Filling to current IRMAA threshold (with $${irmaaBuffer.toLocaleString()} buffer). Already in highest or near-highest IRMAA bracket.`;
+              } else if (taxBracketRoom > 0) {
+                // Last fallback
+                optimalAmount = Math.floor(taxBracketRoom);
+                limitingFactor = 'Tax Bracket';
+                reason = 'Already at IRMAA limits. Fills current tax bracket.';
+              }
+            }
+
+            // Cap at available funds
+            const maxAvailable = accounts.traditionalIRA + accounts.traditional401k;
+            if (optimalAmount > maxAvailable) {
+              optimalAmount = maxAvailable;
+              limitingFactor = 'Available Funds';
+              reason = 'Limited by available Traditional IRA/401(k) balance.';
+            }
+
+            return optimalAmount > 0 ? (
+              <div className="mt-4 p-3 bg-green-50 border border-green-300 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-900 mb-1">
+                      💡 Suggested Optimal Conversion: ${optimalAmount.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-green-800 mb-2">
+                      {reason}
+                    </p>
+                    <div className="text-xs text-gray-700 mb-2">
+                      <strong>Limiting Factor:</strong> {limitingFactor}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
+                      <div>Tax Bracket Room: <strong>${Math.round(taxBracketRoom).toLocaleString()}</strong></div>
+                      <div>IRMAA Room (w/ buffer): <strong>${Math.round(irmaaRoom).toLocaleString()}</strong></div>
+                      {rothOptimizationStrategy === 'aggressive' && roomToNextIRMAABracket > 0 && (
+                        <div className="col-span-2">Room to Next IRMAA Bracket: <strong>{Number.isFinite(roomToNextIRMAABracket)
+                          ? `$${Math.round(roomToNextIRMAABracket).toLocaleString()}`
+                          : 'No bracket above this one'}</strong></div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => updateActiveScenario({ rothConversion: optimalAmount })}
+                      className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                    >
+                      Use Suggested Amount
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-yellow-900 mb-1">
+                      ⚠️ Limited Conversion Opportunity
+                    </p>
+                    <p className="text-xs text-yellow-800">
+                      {taxBracketRoom <= 0 && 'You\'re at the top of your tax bracket. '}
+                      {irmaaRoom <= 0 && 'You\'re at an IRMAA threshold. '}
+                      {niitRoom <= 0 && baselineResults.magi >= baselineResults.niitThreshold && 'You\'re above the NIIT threshold. '}
+                      Any conversion will push you into higher tax brackets or trigger additional surcharges. Consider converting in a lower-income year.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+    </>
+  );
+}
