@@ -102,3 +102,32 @@ describe('controls in the extracted sections', () => {
     expect(labels()).toContain('Spouse Age');
   });
 });
+
+describe('stock prices', () => {
+  const setInput = (input, value) => act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+
+  it('Update Prices looks up a ticker and fills in the price, through the real buttons and state', async () => {
+    const asked = [];
+    vi.stubGlobal('fetch', vi.fn(async (url) => {
+      asked.push(url);
+      return { status: 200, json: async () => ({ chart: { result: [{ meta: { regularMarketPrice: 123.456 } }] } }) };
+    }));
+    // "Stock 1" is not a ticker; rename it to one, as a user would
+    const nameInput = [...container.querySelectorAll('input')].find((i) => i.value === 'Stock 1');
+    await setInput(nameInput, 'AAPL');
+
+    vi.useRealTimers();
+    vi.useFakeTimers();                       // the lookup waits 1.2 s between stocks
+    await click(button('Update Prices'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(3000); });
+
+    expect(asked).toHaveLength(1);            // only the ticker-named stock is looked up
+    expect(asked[0]).toContain('/AAPL?');
+    expect(text()).toContain('Updated 1 of 1 prices!');
+    expect([...container.querySelectorAll('input')].some((i) => i.value === '123.46')).toBe(true);
+    vi.unstubAllGlobals();
+  });
+});
