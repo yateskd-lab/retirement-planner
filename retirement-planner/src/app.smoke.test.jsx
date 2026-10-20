@@ -131,3 +131,116 @@ describe('stock prices', () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe('exporting, importing and resetting your data', () => {
+  const importFile = async (data) => {
+    const input = container.querySelector('input[type="file"]');
+    const file = new File([JSON.stringify(data)], 'plan.json', { type: 'application/json' });
+    Object.defineProperty(input, 'files', { value: [file], configurable: true });
+    await act(async () => { input.dispatchEvent(new Event('change', { bubbles: true })); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 50)); });
+  };
+  const values = () => [...container.querySelectorAll('input')].map((i) => i.value);
+  // the input values inside one card, found by its heading, to prove a value is in the RIGHT section
+  const inSection = (heading) => {
+    const h = [...container.querySelectorAll('h2')].find((x) => x.textContent.includes(heading));
+    return [...h.closest('.pdf-section').querySelectorAll('input')].map((i) => i.value);
+  };
+  const SECTIONS = [['Brokerage Account - Individual Stocks', 'ZZSTOCK'], ['Cryptocurrency Holdings', 'ZZCRYPTO'], ['Precious Metals Holdings', 'ZZMETAL']];
+  const asset = (name, extra = {}) => ({ name, shares: 3, units: 3, costBasis: 10, currentPrice: 20, useLotTracking: false, lots: [], skipPriceUpdate: false, excludeFromTotals: false, ...extra });
+
+  const IMPORTED = () => ({
+    personalInfo: { age: 73 },
+    accounts: { savings: 123456 },
+    socialSecurity: { enabled: true, monthlyBenefit: 3333 },
+    stocks: [asset('ZZSTOCK')],
+    crypto: [asset('ZZCRYPTO')],
+    metals: [asset('ZZMETAL')],
+    scenarios: [
+      { id: 1, name: 'Imported Plan', withdrawals: { traditionalIRA: 1111 } },
+      { id: 2, name: 'Second Plan', withdrawals: { traditionalIRA: 4444 } },
+    ],
+    activeScenarioId: 2,                 // not the default, so a missing setter shows
+    scenarioCounter: 2,
+  });
+
+  beforeEach(() => {
+    vi.stubGlobal('alert', vi.fn());
+    vi.stubGlobal('confirm', vi.fn(() => true));
+    vi.spyOn(console, 'error').mockImplementation(() => {});   // Reset reports that window.storage is absent here
+    URL.createObjectURL = vi.fn(() => 'blob:fake');
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('Export downloads a file holding what is on the screen', async () => {
+    await click(button('Export'));
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+    const blob = URL.createObjectURL.mock.calls[0][0];
+    const json = JSON.parse(await new Promise((resolve) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsText(blob); }));
+    expect(json.stocks.map((x) => x.name)).toEqual(['Stock 1', 'Stock 2']);
+    expect(json.scenarios).toHaveLength(1);
+    expect(json.personalInfo.age).toBe(65);
+  });
+
+  it('Import puts every section of the file into the right place on the screen', async () => {
+    await importFile(IMPORTED());
+    const shown = values();
+    ['73', '123,456', 'ZZSTOCK', 'ZZCRYPTO', 'ZZMETAL'].forEach((v) => expect(shown, v).toContain(v));
+    expect(text()).toContain('Imported Plan');
+    expect(text()).toContain('Second Plan');
+    expect(text()).toContain('Add Scenario (2/');
+    expect(text()).toContain('Data imported successfully!');
+    expect(shown).not.toContain('Stock 1');
+    // each asset lands in its own section, and not in either of the others
+    SECTIONS.forEach(([heading, name]) => {
+      expect(inSection(heading), `${name} in ${heading}`).toContain(name);
+      SECTIONS.filter(([h]) => h !== heading).forEach(([, other]) => expect(inSection(heading)).not.toContain(other));
+    });
+    expect(inSection('Social Security').some((v) => /^3,?333$/.test(v))).toBe(true);
+    // the second scenario is the active one, so its withdrawal is the one on screen
+    expect(shown.some((v) => /^4,?444$/.test(v))).toBe(true);
+    expect(shown.some((v) => /^1,?111$/.test(v))).toBe(false);
+  });
+
+  it('Reset brings the starting values back after an import', async () => {
+    await importFile(IMPORTED());
+    expect(values()).toContain('ZZSTOCK');
+    await click(button('Reset'));
+    expect(confirm).toHaveBeenCalled();
+    expect(values()).not.toContain('ZZSTOCK');
+    expect(values()).toContain('Stock 1');
+    expect(text()).toContain('Reset to default values!');
+    // everything that was imported is gone, and the starting values are back
+    ['73', '123,456', 'ZZCRYPTO', 'ZZMETAL'].forEach((v) => expect(values(), v).not.toContain(v));
+    expect(values()).toContain('65');
+    expect(inSection('Cryptocurrency Holdings')).not.toContain('ZZCRYPTO');
+    expect(inSection('Social Security').some((v) => /^3,?333$/.test(v))).toBe(false);
+    expect(text()).toContain('Add Scenario (1/');
+    expect(text()).not.toContain('Second Plan');
+  });
+
+  it('Reset does nothing if you cancel', async () => {
+    await importFile(IMPORTED());
+    confirm.mockReturnValue(false);
+    await click(button('Reset'));
+    expect(values()).toContain('ZZSTOCK');
+  });
+
+  it('an exported file can be imported back and gives the same screen', async () => {
+    await importFile(IMPORTED());
+    await click(button('Export'));
+    const blob = URL.createObjectURL.mock.calls.at(-1)[0];
+    const exported = JSON.parse(await new Promise((resolve) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.readAsText(blob); }));
+    await click(button('Reset'));
+    expect(values()).not.toContain('ZZSTOCK');
+    await importFile(exported);
+    ['73', '123,456', 'ZZSTOCK', 'ZZCRYPTO', 'ZZMETAL'].forEach((v) => expect(values(), v).toContain(v));
+    expect(values().some((v) => /^4,?444$/.test(v))).toBe(true);     // same scenario still active
+    SECTIONS.forEach(([heading, name]) => expect(inSection(heading), name).toContain(name));
+    expect(text()).toContain('Imported Plan');
+    expect(text()).toContain('Second Plan');
+    expect(text()).toContain('Add Scenario (2/');
+  });
+});
