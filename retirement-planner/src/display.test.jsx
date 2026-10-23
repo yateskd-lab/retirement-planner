@@ -136,16 +136,16 @@ describe('Roth optimizer suggestion box', () => {
     expect(html).not.toContain('∞');
   });
 
-  // KNOWN ISSUE. In the top tax bracket there is no ceiling, so "Tax Bracket Room" is Infinity
-  // and the box prints "$∞". It should say there is no limit. Expected to fail until fixed.
-  it.fails('says "no limit" instead of an infinite dollar amount in the top bracket', () => {
+  // In the top tax bracket there is no ceiling: the engine reports Infinity (the optimizer relies on
+  // that) and the box says so in words.
+  it('says "no limit" instead of an infinite dollar amount in the top bracket', () => {
     const { html } = panel(900000, 'conservative');
     expect(html).toContain('Suggested Optimal Conversion');
     expect(html).not.toContain('∞');
     expect(html).not.toContain('Infinity');
   });
 
-  it.fails('names the no-limit cases in words', () => {
+  it('names the no-limit cases in words', () => {
     // Tax Bracket Room and IRMAA Room are both unlimited here (top tax bracket, top IRMAA tier)
     const { html } = panel(900000, 'conservative');
     expect(html).toContain('No limit (top bracket)');

@@ -217,8 +217,8 @@ export default function RetirementWithdrawals({ accounts, calculateScenario, get
                       <strong>Limiting Factor:</strong> {limitingFactor}
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
-                      <div>Tax Bracket Room: <strong>${Math.round(taxBracketRoom).toLocaleString()}</strong></div>
-                      <div>IRMAA Room (w/ buffer): <strong>${Math.round(irmaaRoom).toLocaleString()}</strong></div>
+                      <div>Tax Bracket Room: <strong>{Number.isFinite(taxBracketRoom) ? `$${Math.round(taxBracketRoom).toLocaleString()}` : 'No limit (top bracket)'}</strong></div>
+                      <div>IRMAA Room (w/ buffer): <strong>{Number.isFinite(irmaaRoom) ? `$${Math.round(irmaaRoom).toLocaleString()}` : 'No limit (top IRMAA bracket)'}</strong></div>
                       {rothOptimizationStrategy === 'aggressive' && roomToNextIRMAABracket > 0 && (
                         <div className="col-span-2">Room to Next IRMAA Bracket: <strong>{Number.isFinite(roomToNextIRMAABracket)
                           ? `$${Math.round(roomToNextIRMAABracket).toLocaleString()}`
