@@ -158,6 +158,24 @@ export default function RetirementTaxPlanner() {
   // Import data from JSON file
   const importData = (event) => runImport(event, { setPersonalInfo, setAccounts, setStocks, setCrypto, setMetals, setSocialSecurity, setApiKey, setScenarios, setActiveScenarioId, setScenarioCounter, setSaveStatus });
 
+  // A plain file input opens wherever the browser last browsed. Chrome and Edge
+  // can be asked to start in Downloads, where Export saves; other browsers keep
+  // the plain input, unchanged. Only Chromium (the one engine with
+  // navigator.userAgentData) is known to honour startIn, so only it uses the picker.
+  const openImportPicker = async (event) => {
+    if (!window.showOpenFilePicker || !navigator.userAgentData) return;
+    event.preventDefault();
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        startIn: 'downloads',
+        types: [{ description: 'Planner data', accept: { 'application/json': ['.json'] } }],
+      });
+      importData({ target: { files: [await handle.getFile()] } });
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error('Error opening import file:', err);
+    }
+  };
+
   // Reset all data to default values
   const resetToDefaults = () => runReset({ setPersonalInfo, setAccounts, setStocks, setCrypto, setMetals, setSocialSecurity, setApiKey, setScenarios, setActiveScenarioId, setScenarioCounter, setSaveStatus });
 
@@ -711,6 +729,7 @@ export default function RetirementTaxPlanner() {
               <input
                 type="file"
                 accept=".json"
+                onClick={openImportPicker}
                 onChange={importData}
                 className="hidden"
               />
