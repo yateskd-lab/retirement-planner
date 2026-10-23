@@ -10,6 +10,7 @@ import { noIncome, makeEngine, makeScenario } from './testHelpers';
 import TaxSummaryGrid from './components/TaxSummaryGrid';
 import RothConversionImpact from './components/RothConversionImpact';
 import IrmaaAnalysis from './components/IrmaaAnalysis';
+import RetirementWithdrawals from './components/RetirementWithdrawals';
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -115,5 +116,39 @@ describe('IRMAA bracket room on screen', () => {
     expect(html).toContain('highest IRMAA bracket');
     expect(html).not.toContain('Room to Next Bracket');
     noInfinity(html);
+  });
+});
+
+describe('Roth optimizer suggestion box', () => {
+  const accounts = { savings: 0, brokerage: 0, traditionalIRA: 2000000, rothIRA: 0, traditional401k: 0, roth401k: 0 };
+  const panel = (income, strategy) => {
+    const scenario = withIRA(income);
+    return render(RetirementWithdrawals, scenario, {
+      accounts, irmaaBuffer: 5000, rothOptimizationStrategy: strategy,
+      updateActiveScenario: () => {}, updateWithdrawal: () => {}, setIrmaaBuffer: () => {}, setRothOptimizationStrategy: () => {},
+    });
+  };
+
+  it('shows the suggested amount and the room figures normally', () => {
+    const { html } = panel(60000, 'conservative');
+    expect(html).toContain('Suggested Optimal Conversion');
+    expect(html).toContain('Tax Bracket Room');
+    expect(html).not.toContain('∞');
+  });
+
+  // KNOWN ISSUE. In the top tax bracket there is no ceiling, so "Tax Bracket Room" is Infinity
+  // and the box prints "$∞". It should say there is no limit. Expected to fail until fixed.
+  it.fails('says "no limit" instead of an infinite dollar amount in the top bracket', () => {
+    const { html } = panel(900000, 'conservative');
+    expect(html).toContain('Suggested Optimal Conversion');
+    expect(html).not.toContain('∞');
+    expect(html).not.toContain('Infinity');
+  });
+
+  it.fails('names the no-limit cases in words', () => {
+    // Tax Bracket Room and IRMAA Room are both unlimited here (top tax bracket, top IRMAA tier)
+    const { html } = panel(900000, 'conservative');
+    expect(html).toContain('No limit (top bracket)');
+    expect(html).toContain('No limit (top IRMAA bracket)');
   });
 });
