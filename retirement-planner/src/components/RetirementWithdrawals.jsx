@@ -1,7 +1,7 @@
 import React from 'react';
 import { DollarSign, TrendingDown, AlertCircle } from 'lucide-react';
 import { IRMAA_PROJECTED, IRMAA_PROJECTION_YEARS } from '../taxConfig';
-import { computeRothOptimization } from '../rothOptimizer';
+import { computeRothOptimization, availableToConvert } from '../rothOptimizer';
 
 export default function RetirementWithdrawals({ accounts, calculateScenario, getActiveScenario, irmaaBracketsFor, irmaaBuffer, irmaaFilingStatus, rothOptimizationStrategy, setIrmaaBuffer, setRothOptimizationStrategy, updateActiveScenario, updateWithdrawal }) {
   return (
@@ -185,7 +185,8 @@ export default function RetirementWithdrawals({ accounts, calculateScenario, get
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              Max available: ${(accounts.traditionalIRA + accounts.traditional401k).toLocaleString()}
+              Max available: ${availableToConvert(accounts, getActiveScenario().withdrawals).toLocaleString()}
+              {availableToConvert(accounts) !== availableToConvert(accounts, getActiveScenario().withdrawals) && ' (after your planned withdrawals)'}
             </p>
           </div>
 
@@ -200,6 +201,7 @@ export default function RetirementWithdrawals({ accounts, calculateScenario, get
               optimalAmount, limitingFactor, reason, taxBracketRoom, irmaaRoom, niitRoom, roomToNextIRMAABracket,
             } = computeRothOptimization({
               baselineResults, irmaaBrackets, irmaaBuffer, rothOptimizationStrategy, accounts,
+              withdrawals: getActiveScenario().withdrawals,
             });
 
             return optimalAmount > 0 ? (

@@ -1,7 +1,7 @@
 // The Roth conversion optimizer: how much to convert before hitting a limit. First every
 // branch with hand-worked numbers, then against the real tax engine.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { computeRothOptimization } from './rothOptimizer';
+import { computeRothOptimization, availableToConvert } from './rothOptimizer';
 import { makeEngine, makeScenario } from './testHelpers';
 
 // ------------------------- hand-worked cases -------------------------
@@ -142,6 +142,69 @@ describe('available funds', () => {
   });
 });
 
+describe('what is available to convert', () => {
+  it('is the Traditional IRA plus 401(k) balance when nothing is being withdrawn', () => {
+    expect(availableToConvert(funds)).toBe(400000);
+    expect(availableToConvert(funds, {})).toBe(400000);
+    expect(availableToConvert(funds, { traditionalIRA: 0, traditional401k: 0 })).toBe(400000);
+  });
+  it('takes off what the scenario already withdraws from either Traditional account', () => {
+    expect(availableToConvert(funds, { traditionalIRA: 150000 })).toBe(250000);
+    expect(availableToConvert(funds, { traditional401k: 50000 })).toBe(350000);
+    expect(availableToConvert(funds, { traditionalIRA: 150000, traditional401k: 50000 })).toBe(200000);
+  });
+  it('ignores withdrawals from accounts that are not being converted', () => {
+    expect(availableToConvert(funds, { savings: 90000, brokerage: 90000, rothIRA: 90000, roth401k: 90000 })).toBe(400000);
+  });
+  it('is never negative, even if the withdrawals are more than the balance', () => {
+    expect(availableToConvert(funds, { traditionalIRA: 999999 })).toBe(0);
+  });
+  it('copes with amounts that arrive as text or are missing', () => {
+    expect(availableToConvert(funds, { traditionalIRA: '100000', traditional401k: undefined })).toBe(300000);
+    expect(availableToConvert(funds, { traditionalIRA: 'abc' })).toBe(400000);
+  });
+});
+
+describe('the cap after planned withdrawals', () => {
+  const withWithdrawals = (strategy, withdrawals, over = {}, accounts = funds) => computeRothOptimization({
+    baselineResults: base(over), irmaaBrackets: tiers, irmaaBuffer: 0,
+    rothOptimizationStrategy: strategy, accounts, withdrawals,
+  });
+
+  it('cannot suggest converting money that is being withdrawn', () => {
+    const r = withWithdrawals('conservative', { traditionalIRA: 100000 }, { roomInBracket: Infinity });
+    expect(r.optimalAmount).toBe(300000);                    // 400,000 less 100,000
+    expect(r.limitingFactor).toBe('Available Funds');
+    expect(r.reason).toBe('Limited by the Traditional IRA/401(k) balance left after your planned withdrawals.');
+  });
+  it('counts a 401(k) withdrawal the same way', () => {
+    expect(withWithdrawals('conservative', { traditional401k: 100000 }, { roomInBracket: Infinity }).optimalAmount).toBe(300000);
+  });
+  it('suggests nothing when the withdrawals already use the whole balance', () => {
+    const r = withWithdrawals('conservative', { traditionalIRA: 400000 });
+    expect(r.optimalAmount).toBe(0);
+    expect(r.limitingFactor).toBe('Available Funds');
+  });
+  it('does not touch a suggestion that already fits in what is left', () => {
+    const r = withWithdrawals('conservative', { traditionalIRA: 100000 });   // room 20,000, left 300,000
+    expect(r.optimalAmount).toBe(20000);
+    expect(r.limitingFactor).toBe('Tax Bracket');
+  });
+  it('applies to every strategy', () => {
+    ['conservative', 'irmaa', 'aggressive'].forEach((strategy) => {
+      const r = withWithdrawals(strategy, { traditionalIRA: 390000 }, { roomInBracket: 50000, roomToNextIRMAABracket: 50000 });
+      expect(r.optimalAmount, strategy).toBe(10000);
+      expect(r.limitingFactor, strategy).toBe('Available Funds');
+    });
+  });
+  it('keeps the original wording when nothing is being withdrawn', () => {
+    expect(optimize('conservative', { roomInBracket: 500000 }).reason).toBe('Limited by available Traditional IRA/401(k) balance.');
+  });
+  it('ignores withdrawals from other accounts', () => {
+    expect(withWithdrawals('conservative', { savings: 100000, rothIRA: 100000 }, { roomInBracket: Infinity }).optimalAmount).toBe(400000);
+  });
+});
+
 describe('the other figures it reports', () => {
   it('NIIT room is the distance below the threshold, never negative', () => {
     expect(optimize('conservative', { magi: 150000 }).niitRoom).toBe(50000);
@@ -188,6 +251,7 @@ describe('with the real tax engine', () => {
       baselineResults: baseline, irmaaBrackets: engine.irmaaBracketsFor(engine.irmaaFilingStatus),
       irmaaBuffer: BUFFER, rothOptimizationStrategy: strategy,
       accounts: { traditionalIRA: 1000000, traditional401k: 0 },
+      withdrawals: scenario.withdrawals,
     });
     const converted = (amount2) => engine.calculateScenario({ ...scenario, rothConversion: amount2 });
     return { engine, baseline, suggest, converted };
@@ -223,6 +287,21 @@ describe('with the real tax engine', () => {
     expect(further.optimalAmount).toBeLessThan(r.optimalAmount);
   });
 
+  it('a $900,000 withdrawal from a $1,634,122 account leaves at most $734,122 to convert', () => {
+    const engine = makeEngine({ personalInfo: { age: 66 } });
+    const scenario = makeScenario({ withdrawals: { traditionalIRA: 900000 } });
+    const baseline = engine.calculateScenario({ ...scenario, rothConversion: 0 });
+    expect(baseline.roomInBracket).toBe(Infinity);                     // top tax bracket: no ceiling
+    const r = computeRothOptimization({
+      baselineResults: baseline, irmaaBrackets: engine.irmaaBracketsFor(engine.irmaaFilingStatus),
+      irmaaBuffer: 5000, rothOptimizationStrategy: 'conservative',
+      accounts: { traditionalIRA: 1634122, traditional401k: 0 }, withdrawals: scenario.withdrawals,
+    });
+    expect(r.optimalAmount).toBe(734122);
+    expect(r.limitingFactor).toBe('Available Funds');
+    expect(900000 + r.optimalAmount).toBe(1634122);                    // exactly the whole account, no more
+  });
+
   describe.each(people)('%s', (_name, info, amount) => {
     it.each(STRATEGIES)('%s: a whole, non-negative amount within the balance', (strategy) => {
       const { suggest } = setup(info, amount);
@@ -230,7 +309,8 @@ describe('with the real tax engine', () => {
       expect(Number.isFinite(optimalAmount)).toBe(true);
       expect(Number.isInteger(optimalAmount)).toBe(true);
       expect(optimalAmount).toBeGreaterThanOrEqual(0);
-      expect(optimalAmount).toBeLessThanOrEqual(1000000);
+      // withdrawing and converting together can never be more than the account holds
+      expect(amount + optimalAmount).toBeLessThanOrEqual(1000000);
     });
 
     it('conservative: converting the suggestion fills the bracket, and one more dollar leaves it', () => {

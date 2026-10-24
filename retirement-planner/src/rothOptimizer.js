@@ -5,11 +5,20 @@
 //   conservative  stay inside the current tax bracket
 //   irmaa         fill up to the IRMAA threshold (less the safety buffer), even across tax brackets
 //   aggressive    fill to the top of the NEXT IRMAA bracket
-// The answer is never more than the Traditional IRA/401(k) balance available.
+// The answer is never more than what is left in the Traditional IRA/401(k) after the withdrawals
+// the scenario already takes from them (see availableToConvert).
 // A room of Infinity means there is no ceiling above (the top bracket).
 
+// How much could still be converted: the Traditional IRA + 401(k) balance, less what the
+// scenario already withdraws from them. The same money cannot be both withdrawn and converted.
+// `withdrawals` is the scenario's withdrawals object; only the two Traditional accounts count.
+export const availableToConvert = (accounts, withdrawals = {}) => {
+  const planned = (Number(withdrawals.traditionalIRA) || 0) + (Number(withdrawals.traditional401k) || 0);
+  return Math.max(0, accounts.traditionalIRA + accounts.traditional401k - planned);
+};
+
 export const computeRothOptimization = ({
-  baselineResults, irmaaBrackets, irmaaBuffer, rothOptimizationStrategy, accounts,
+  baselineResults, irmaaBrackets, irmaaBuffer, rothOptimizationStrategy, accounts, withdrawals = {},
 }) => {
   // Calculate constraints with IRMAA buffer applied
   const taxBracketRoom = baselineResults.roomInBracket > 0 ? baselineResults.roomInBracket : 0;
@@ -88,12 +97,15 @@ export const computeRothOptimization = ({
     }
   }
 
-  // Cap at available funds
-  const maxAvailable = accounts.traditionalIRA + accounts.traditional401k;
+  // Cap at what is left to convert after the withdrawals already planned from the same accounts
+  const maxAvailable = availableToConvert(accounts, withdrawals);
+  const hasPlannedWithdrawals = availableToConvert(accounts) !== maxAvailable;
   if (optimalAmount > maxAvailable) {
     optimalAmount = maxAvailable;
     limitingFactor = 'Available Funds';
-    reason = 'Limited by available Traditional IRA/401(k) balance.';
+    reason = hasPlannedWithdrawals
+      ? 'Limited by the Traditional IRA/401(k) balance left after your planned withdrawals.'
+      : 'Limited by available Traditional IRA/401(k) balance.';
   }
 
   return { optimalAmount, limitingFactor, reason, taxBracketRoom, irmaaRoom, niitRoom, roomToNextIRMAABracket };

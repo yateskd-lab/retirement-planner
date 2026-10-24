@@ -145,6 +145,23 @@ describe('Roth optimizer suggestion box', () => {
     expect(html).not.toContain('Infinity');
   });
 
+  it('does not offer to convert money that is already being withdrawn', () => {
+    // 2,000,000 in the account, 900,000 withdrawn: at most 1,100,000 can be converted
+    const { html } = panel(900000, 'conservative');
+    const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    expect(text).toMatch(/Suggested Optimal Conversion: \$1,?100,?000/);
+    expect(text).toContain('balance left after your planned withdrawals');
+    expect(text).not.toMatch(/\$2,?000,?000/);
+  });
+
+  it('"Max available" is the balance less the planned withdrawals, and says why', () => {
+    const withWithdrawal = panel(900000, 'conservative').html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    expect(withWithdrawal).toMatch(/Max available: \$1,?100,?000 \(after your planned withdrawals\)/);
+    const none = panel(0, 'conservative').html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    expect(none).toMatch(/Max available: \$2,?000,?000/);
+    expect(none).not.toContain('after your planned withdrawals');
+  });
+
   it('names the no-limit cases in words', () => {
     // Tax Bracket Room and IRMAA Room are both unlimited here (top tax bracket, top IRMAA tier)
     const { html } = panel(900000, 'conservative');
