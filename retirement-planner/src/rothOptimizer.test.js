@@ -1,7 +1,7 @@
 // The Roth conversion optimizer: how much to convert before hitting a limit. First every
 // branch with hand-worked numbers, then against the real tax engine.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { computeRothOptimization, availableToConvert } from './rothOptimizer';
+import { computeRothOptimization, availableToConvert, conversionShortfall } from './rothOptimizer';
 import { makeEngine, makeScenario } from './testHelpers';
 
 // ------------------------- hand-worked cases -------------------------
@@ -165,6 +165,43 @@ describe('what is available to convert', () => {
   });
 });
 
+describe('a plan that asks for more than the accounts hold', () => {
+  it('is zero when the withdrawals plus the conversion fit, even exactly', () => {
+    expect(conversionShortfall(funds, { traditionalIRA: 100000 }, 300000)).toBe(0);    // 400,000 in total
+    expect(conversionShortfall(funds, { traditionalIRA: 100000 }, 100000)).toBe(0);
+    expect(conversionShortfall(funds)).toBe(0);
+  });
+  it('is the amount over, when they do not', () => {
+    expect(conversionShortfall(funds, { traditionalIRA: 100000 }, 350000)).toBe(50000);
+    expect(conversionShortfall(funds, {}, 400001)).toBe(1);
+  });
+  it('counts a 401(k) withdrawal as well', () => {
+    expect(conversionShortfall(funds, { traditionalIRA: 100000, traditional401k: 100000 }, 250000)).toBe(50000);
+  });
+  it('still reports a shortfall when the withdrawals alone are more than the balance', () => {
+    expect(conversionShortfall(funds, { traditionalIRA: 450000 }, 0)).toBe(50000);
+    expect(conversionShortfall(funds, { traditionalIRA: 450000 }, 20000)).toBe(70000);
+  });
+  it('ignores withdrawals from accounts that are not being converted', () => {
+    expect(conversionShortfall(funds, { savings: 999999, rothIRA: 999999 }, 100000)).toBe(0);
+  });
+  it('copes with amounts that arrive as text or are missing', () => {
+    expect(conversionShortfall(funds, { traditionalIRA: '100000' }, '350000')).toBe(50000);
+    expect(conversionShortfall(funds, { traditionalIRA: 'abc' }, 'xyz')).toBe(0);
+    expect(conversionShortfall(funds, undefined, undefined)).toBe(0);
+  });
+  it('agrees with availableToConvert: anything above the available amount is a shortfall', () => {
+    [0, 50000, 150000, 399999, 400000].forEach((planned) => {
+      const withdrawals = { traditionalIRA: planned };
+      const available = availableToConvert(funds, withdrawals);
+      [0, 1, available - 1, available, available + 1, available + 12345].forEach((conversion) => {
+        if (conversion < 0) return;
+        expect(conversionShortfall(funds, withdrawals, conversion)).toBe(Math.max(0, conversion - available));
+      });
+    });
+  });
+});
+
 describe('the cap after planned withdrawals', () => {
   const withWithdrawals = (strategy, withdrawals, over = {}, accounts = funds) => computeRothOptimization({
     baselineResults: base(over), irmaaBrackets: tiers, irmaaBuffer: 0,
@@ -311,6 +348,7 @@ describe('with the real tax engine', () => {
       expect(optimalAmount).toBeGreaterThanOrEqual(0);
       // withdrawing and converting together can never be more than the account holds
       expect(amount + optimalAmount).toBeLessThanOrEqual(1000000);
+      expect(conversionShortfall({ traditionalIRA: 1000000, traditional401k: 0 }, { traditionalIRA: amount }, optimalAmount)).toBe(0);
     });
 
     it('conservative: converting the suggestion fills the bracket, and one more dollar leaves it', () => {

@@ -12,10 +12,17 @@
 // How much could still be converted: the Traditional IRA + 401(k) balance, less what the
 // scenario already withdraws from them. The same money cannot be both withdrawn and converted.
 // `withdrawals` is the scenario's withdrawals object; only the two Traditional accounts count.
-export const availableToConvert = (accounts, withdrawals = {}) => {
-  const planned = (Number(withdrawals.traditionalIRA) || 0) + (Number(withdrawals.traditional401k) || 0);
-  return Math.max(0, accounts.traditionalIRA + accounts.traditional401k - planned);
-};
+const plannedTraditionalWithdrawals = (withdrawals = {}) =>
+  (Number(withdrawals.traditionalIRA) || 0) + (Number(withdrawals.traditional401k) || 0);
+
+export const availableToConvert = (accounts, withdrawals = {}) =>
+  Math.max(0, accounts.traditionalIRA + accounts.traditional401k - plannedTraditionalWithdrawals(withdrawals));
+
+// By how much the withdrawals PLUS the conversion are more than the Traditional IRA + 401(k)
+// hold. Zero when the plan fits; anything above zero is a plan that cannot happen.
+export const conversionShortfall = (accounts, withdrawals = {}, conversion = 0) =>
+  Math.max(0, plannedTraditionalWithdrawals(withdrawals) + (Number(conversion) || 0)
+    - (accounts.traditionalIRA + accounts.traditional401k));
 
 export const computeRothOptimization = ({
   baselineResults, irmaaBrackets, irmaaBuffer, rothOptimizationStrategy, accounts, withdrawals = {},

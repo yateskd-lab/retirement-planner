@@ -1,7 +1,7 @@
 import React from 'react';
 import { DollarSign, TrendingDown, AlertCircle } from 'lucide-react';
 import { IRMAA_PROJECTED, IRMAA_PROJECTION_YEARS } from '../taxConfig';
-import { computeRothOptimization, availableToConvert } from '../rothOptimizer';
+import { computeRothOptimization, availableToConvert, conversionShortfall } from '../rothOptimizer';
 
 export default function RetirementWithdrawals({ accounts, calculateScenario, getActiveScenario, irmaaBracketsFor, irmaaBuffer, irmaaFilingStatus, rothOptimizationStrategy, setIrmaaBuffer, setRothOptimizationStrategy, updateActiveScenario, updateWithdrawal }) {
   return (
@@ -188,6 +188,11 @@ export default function RetirementWithdrawals({ accounts, calculateScenario, get
               Max available: ${availableToConvert(accounts, getActiveScenario().withdrawals).toLocaleString()}
               {availableToConvert(accounts) !== availableToConvert(accounts, getActiveScenario().withdrawals) && ' (after your planned withdrawals)'}
             </p>
+            {conversionShortfall(accounts, getActiveScenario().withdrawals, getActiveScenario().rothConversion) > 0 && (
+              <p className="text-xs text-red-600 mt-1">
+                ⚠ Your withdrawals plus this conversion are ${Math.round(conversionShortfall(accounts, getActiveScenario().withdrawals, getActiveScenario().rothConversion)).toLocaleString()} more than your Traditional IRA/401(k) balance.
+              </p>
+            )}
           </div>
 
           {/* Smart Optimizer */}

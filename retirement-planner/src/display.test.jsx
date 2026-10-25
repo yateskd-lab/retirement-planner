@@ -119,6 +119,30 @@ describe('IRMAA bracket room on screen', () => {
   });
 });
 
+describe('warning when the plan asks for more than the accounts hold', () => {
+  const accounts = { savings: 0, brokerage: 0, traditionalIRA: 2000000, rothIRA: 0, traditional401k: 0, roth401k: 0 };
+  const form = (withdrawal, conversion) => {
+    const { html } = render(RetirementWithdrawals, withIRA(withdrawal, { rothConversion: conversion }), {
+      accounts, irmaaBuffer: 5000, rothOptimizationStrategy: 'conservative',
+      updateActiveScenario: () => {}, updateWithdrawal: () => {}, setIrmaaBuffer: () => {}, setRothOptimizationStrategy: () => {},
+    });
+    return html.replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/\s+/g, ' ');
+  };
+
+  it('warns, with the amount over, when withdrawals plus the conversion are too much', () => {
+    // 900,000 withdrawn + 1,200,000 converted = 2,100,000 from a 2,000,000 account
+    expect(form(900000, 1200000)).toMatch(/⚠ Your withdrawals plus this conversion are \$100,?000 more than your Traditional IRA\/401\(k\) balance\./);
+  });
+  it('says nothing when the plan fits, even exactly', () => {
+    expect(form(900000, 1100000)).not.toContain('more than your Traditional IRA/401(k) balance');
+    expect(form(900000, 500000)).not.toContain('⚠');
+    expect(form(0, 0)).not.toContain('⚠');
+  });
+  it('also warns when the withdrawals alone are more than the balance', () => {
+    expect(form(2100000, 0)).toMatch(/\$100,?000 more than your Traditional IRA\/401\(k\) balance/);
+  });
+});
+
 describe('Roth optimizer suggestion box', () => {
   const accounts = { savings: 0, brokerage: 0, traditionalIRA: 2000000, rothIRA: 0, traditional401k: 0, roth401k: 0 };
   const panel = (income, strategy) => {
