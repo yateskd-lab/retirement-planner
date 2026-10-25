@@ -132,6 +132,48 @@ describe('stock prices', () => {
   });
 });
 
+describe('the Roth conversion field', () => {
+  const field = () => [...container.querySelectorAll('input')].find((i) => i.placeholder === 'Enter amount to convert');
+  const type = (value) => act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(field(), value);
+    field().dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  const WARNING = 'more than your Traditional IRA/401(k) balance';
+
+  it('warns when the conversion is more than the accounts hold, and stops when it is not', async () => {
+    expect(text()).not.toContain(WARNING);
+    await type('99999999');
+    expect(text()).toContain(WARNING);
+    expect(text()).toContain('Your withdrawals plus this conversion are');
+    await type('0');
+    expect(text()).not.toContain(WARNING);
+  });
+
+  it('"Max available" falls by the Traditional IRA withdrawal, and says why', async () => {
+    const maxLine = () => Number(text().match(/Max available: \$([\d,]+)/)[1].replace(/,/g, ''));
+    const iraField = () => {
+      const h = [...container.querySelectorAll('h2')].find((x) => x.textContent.includes('Retirement & Savings Account Withdrawals'));
+      const label = [...h.closest('.pdf-section').querySelectorAll('label')].find((l) => l.textContent.trim().startsWith('Traditional IRA'));
+      return label.parentElement.querySelector('input');
+    };
+    const typeInto = (input, value) => act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const full = maxLine();
+    expect(full).toBeGreaterThan(50000);
+    expect(text()).not.toContain('after your planned withdrawals');
+
+    await typeInto(iraField(), '50000');
+    expect(maxLine()).toBe(full - 50000);
+    expect(text()).toContain('after your planned withdrawals');
+
+    await typeInto(iraField(), '0');
+    expect(maxLine()).toBe(full);
+    expect(text()).not.toContain('after your planned withdrawals');
+  });
+});
+
 describe('exporting, importing and resetting your data', () => {
   const importFile = async (data) => {
     const input = container.querySelector('input[type="file"]');
