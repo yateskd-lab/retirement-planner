@@ -241,12 +241,12 @@ describe('net investment income tax', () => {
 describe('Utah state tax', () => {
   it('single, 65, $60,000: flat rate less the taxpayer credit', () => {
     // before credit 60,000 x 4.45% = 2,670; credit base 16,100 + 2,050 = 18,150
-    // initial credit 6% x 18,150 = 1,089, less 1.3% x (60,000 - 18,213) = 543.231 -> 545.769
-    // Utah tax 2,670 - 545.769 = 2,124.231 (born 1961, after the 1952 retirement-credit cutoff)
+    // initial credit 6% x 18,150 = 1,089, less 1.3% x (60,000 - 18,696) = 536.952 -> 552.048
+    // Utah tax 2,670 - 552.048 = 2,117.952 (born 1961, after the 1952 retirement-credit cutoff)
     const r = run({ personalInfo: { age: 65 } }, ira(60000));
     expect(r.utahTaxBeforeCredit).toBeCloseTo(2670, 6);
-    expect(r.utahTaxpayerCredit).toBeCloseTo(545.769, 3);
-    expect(r.totalUtahTax).toBeCloseTo(2124.231, 3);
+    expect(r.utahTaxpayerCredit).toBeCloseTo(552.048, 3);
+    expect(r.totalUtahTax).toBeCloseTo(2117.952, 3);
     expect(r.totalTaxWithState).toBeCloseTo(r.totalTax + r.totalUtahTax, 9);
   });
 
