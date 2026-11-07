@@ -156,17 +156,17 @@
       "utah": {
         "flatRate": 0.0445,
         "taxpayerCredit": {
-          "_note": "Utah taxpayer tax credit (Utah Code 59-10-1018; TC-40 lines 11-20): creditRate x (federal standard deduction incl. the 65+ extra + personalExemption per dependent), reduced by phaseOutRate x Utah taxable income above basePhaseOut. Utah publishes each year's amounts in that year's TC-40 instructions; the 2026 ones were not out yet, so these are the 2025 amounts (amountsYear). Replace them and set amountsYear to 2026 when they are published.",
-          "amountsYear": 2025,
+          "_note": "Utah taxpayer tax credit (Utah Code 59-10-1018; 2026 draft TC-40 lines 9-19, base phase-out on line 15): creditRate x (federal standard deduction incl. the 65+ extra + personalExemption per dependent), reduced by phaseOutRate x Utah taxable income above basePhaseOut. Utah publishes each year's amounts in that year's TC-40 instructions; the 2026 values below are from draft TC-40 (DRAFT 10/20/26) and should be rechecked when final instructions are published.",
+          "amountsYear": 2026,
           "creditRate": 0.06,
-          "personalExemption": 2111,
+          "personalExemption": 2167,
           "phaseOutRate": 0.013,
           "basePhaseOut": {
-            "single": 18213,
-            "married": 36426,
-            "marriedFilingSeparately": 18213,
-            "hoh": 27320,
-            "qualifyingSurvivingSpouse": 36426
+            "single": 18696,
+            "married": 37392,
+            "marriedFilingSeparately": 18696,
+            "hoh": 28045,
+            "qualifyingSurvivingSpouse": 37392
           }
         },
         "socialSecurityCredit": {
