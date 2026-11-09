@@ -156,7 +156,7 @@
       "utah": {
         "flatRate": 0.0445,
         "taxpayerCredit": {
-          "_note": "Utah taxpayer tax credit (Utah Code 59-10-1018; 2026 draft TC-40 lines 9-19, base phase-out on line 15): creditRate x (federal standard deduction incl. the 65+ extra + personalExemption per dependent), reduced by phaseOutRate x Utah taxable income above basePhaseOut. Utah publishes each year's amounts in that year's TC-40 instructions; the 2026 values below are from draft TC-40 (DRAFT 10/20/26) and should be rechecked when final instructions are published.",
+          "_note": "Utah taxpayer tax credit (Utah Code 59-10-1018; 2026 draft TC-40 lines 9-18, base phase-out on line 15): creditRate x (federal standard deduction incl. the 65+ extra + personalExemption per dependent), reduced by phaseOutRate x Utah taxable income above basePhaseOut. Utah publishes each year's amounts in that year's TC-40 instructions; the 2026 values below are from draft TC-40 (DRAFT 10/20/26) and should be rechecked when final instructions are published.",
           "amountsYear": 2026,
           "creditRate": 0.06,
           "personalExemption": 2167,
